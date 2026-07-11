@@ -1,0 +1,37 @@
+# Hemligheter — aldrig i git (CLAUDE.md #4)
+.env
+.env*
+!.env.example
+
+# Beroenden
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Bygge & cache
+dist/
+*.tsbuildinfo
+.turbo/
+
+# Supabase lokalt
+supabase/.temp/
+supabase/.branches/
+
+# OS & editor
+.DS_Store
+*.pem
+
+# Loggar
+npm-debug.log*
+*.log
+
+# Vercel
+.vercel/
+
+# Test-artefakter
+coverage/
+playwright-report/
+test-results/
