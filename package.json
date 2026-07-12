@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:rls": "node --env-file=.env.local --test test/rls.test.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.109.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.24.0",
@@ -28,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "ws": "^8.21.0"
   }
 }
