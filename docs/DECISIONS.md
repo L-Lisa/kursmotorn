@@ -58,3 +58,27 @@ Lisa bad om en granskning av fundamentet före fas 2. Grindarna omkördes skarpt
 - **Fynd 4 [Låg–Medium, framåtvakt]:** anon har noll läsning på `tenants`/`tenant_brands`. Fas 2:s publika tenant-brandade landnings-/login-sida + `/verify/<slug>` (fas 5) kräver en **smal SECURITY DEFINER-lookup (slug + brand-tokens)** — luckra ALDRIG upp RLS med bred anon-SELECT.
 - **Fynd 5 [Låg]:** `practice_day`-unikheten är global per user (user_id, log_type, logged_date), inte per kurs — bekräfta avsikt före fas 7:s MG-fönster (deltagare i två kurser skulle annars blockeras).
 - **Fynd 6 [Låg]:** endast `recordings`-bucketen finns; bild-/kursmedia-buckets + path-prefix-policyer byggs i fas 2/3 med samma rigor.
+
+## 2026-07-12 — Fas 2: context-lager + tenant-rendering (commit `8ca0bbf`)
+
+### Arkitekturbeslut
+- **Eject-snittet realiserat som `src/lib/tenant/`.** All tenant-data läses genom `getTenantContext(slug)` → `parseBrand()` (enda stället en rå brand_spec tolkas). Brand-tokens blir inline `--t-*`-CSS-variabler via `brandCssVars()`, satta på tenant-layoutens wrapper. Komponenterna läser bara `var(--t-*)` — ingen komponent känner till en specifik tenant. Det är detta som gör exporten (fas 8) möjlig: byt datakällan, behåll komponenterna.
+- **@supabase/ssr + `proxy.ts` (Next 16).** `middleware` heter `proxy` från v16 (Node-runtime default). Tre klienter: `server.ts` (RSC, anon-nyckel + session ur cookies), `client.ts` (browser, för login), `proxy.ts` (sessionsförnyelse; ingen auktoriseringslogik — RLS + per-route-kontroller gatar). Motorn rör **aldrig** service-nyckeln i renderingsvägen — tenant-isolationen vilar på RLS hela vägen.
+- **Fynd 4 åtgärdat — smal publik brand-lookup.** Migration `..06`: `tenant_public_brand(slug)` SECURITY DEFINER returnerar EN tenants slug + brand_spec, `grant execute … to anon`. Ingen bred anon-SELECT på tenants/tenant_brands. Samma funktion används av login-/landningssidan (anon) OCH av inloggade vyer — ett context-lager oavsett rollen.
+- **Routning: path-baserad `/{tenant-slug}/…`** i demon. Host-/subdomän-mappning kräver wildcard-DNS + Vercel-domän → **fortsatt öppen** (SPEC §5), avgörs mot Vercel-uppsättningen; path-vägen räcker för v1-demon och exporten.
+- **Motor-namnet = konfigvariabel.** `NEXT_PUBLIC_APP_NAME` (default "Kursmotorn") i `src/lib/config.ts` — namnbytes-säkert.
+- **Fonter self-hostas via `next/font/google`** (Inter, JetBrains Mono, Lora, Fraunces, Source Sans 3, Geist Mono). Namn i brand_spec → CSS-variabel via en registry. **v1-begränsning:** next/font kräver statiska importer, så en tenant kan bara välja bland de laddade familjerna; okänt fontnamn → sans-fallback. Ny kundfont = en importrad + deploy (självbetjäning senare). Loggat som medvetet avsteg.
+- **MG `primary_dark` = `#0F1B30`** är en härledd mörkare Ink-nyans (MG:s brand.md anger inget primary_dark; Ink `#1A2942` är primär). Används bara på certifikatytor (fas 5). [Gissning] — bekräftas när certifikatet byggs.
+
+### GRIND 2 kvitto (skärmdumpsloop + WCAG)
+- **Skärmdumpar:** `outputs/kursmotorn/grind2/` (01 motor-login · 02–03 publika landningar · 04 motor-admin · 05–06 kursvyn i BÅDA tenants). Harness: `scripts/grind2-screenshots.mjs` (playwright, dev-dep — projektets stående skärmdumps-grind). **Samma komponent, två varumärken:** Andningskursen (sand/petrol/Lora/JetBrains) vs Mindfulnessguiden (Vellum/Ink-navy/Fraunces/Geist Mono) — MG:s tokens återgivna exakt mot Editorial Lugn. Motor-admin matchar "Varma maskinrummet"-styleprovet.
+- **Acceptans #2 bevisad skarpt:** ändrade `andningskursen` primary i DB (#1F5F5B→#0B5563), `--t-primary` i renderad publik HTML följde med **utan kodändring, deploy eller omstart**; återställd exakt till #1F5F5B.
+- **WCAG AA (script, kontrastberäkning):** motor + MG passerar allt (brödtext 13–15:1, muted 4.6–5.6:1, knappar 7–15:1). Andningskursen: brödtext 12.3:1, vit/petrol-knapp 7.4:1 = OK.
+  - **Åtgärdat:** "Inspelning"-etiketten var accent-guld som text (2.99:1, FAIL) → gjord till **soft badge** (`--t-soft`-bg + `--t-primary-dark`-text), 8.9:1 (andning) / 14.2:1 (MG). Guld/mässing används inte längre som brödtext någonstans — matchar brand.md:s "accent = badges/detaljer, sparsamt".
+  - **ÖPPET (Lisas call):** andning `muted #6E7A76` på bg `#F6F3ED` = **4.03:1**, 0.47 under AA för liten sekundärtext (eyebrow-etiketter, modul-intro). Det är en **låst demo-brand-token** (palett A, graderad i moodboard-rundan) → jag ändrar den inte utan Lisas nya gradering. Tre vägar: (a) acceptera 4.03 (marginellt; MG:s muted #5A6273 = 5.58 passerar), (b) mörka andning-muted en aning till ≥4.5, (c) begränsa muted till stor text. MG mässing `#8B6F3F` på bg = 4.31:1 men används bara som liten facilitations-etikett; samma badge-mönster löser det om/när det används.
+
+### Standing regressionsvakter (grind före commit)
+- RLS-sviten **12/12** grön mot live-DB · hemlighetsgrind **0** · build grön · namnbytes-grep (`mindfulnessguiden|andningskursen|respira` i `src/`) = **0** · inga priser/procent i `src/`.
+
+### Öppet in i fas 3
+- Host-/subdomän-routning (öppen sedan fas 0) · fynd 5 (practice_day-unikhet, före fas 7) · fynd 6 (bild-/kursmedia-buckets — byggs i fas 3 med kursimporten) · fynd 3 (ren `supabase db reset` — Docker, blockerande före eject/go-live, **fortsatt synligt öppet**) · WCAG-punkten ovan väntar Lisas beslut.
