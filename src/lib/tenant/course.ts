@@ -86,6 +86,54 @@ export function sectionsInOrder(course: CourseView): CourseSection[] {
   return course.modules.flatMap((m) => m.sections);
 }
 
+export type QuizSummary = {
+  id: string;
+  title: string;
+  isFinal: boolean;
+  maxAttempts: number | null;
+  passed: boolean;
+  attempts: number;
+};
+
+/** Kursens prov + användarens bästa resultat. Frågorna hämtas inte här (facit-säkert). */
+export async function getCourseQuizzes(
+  courseId: string,
+  userId: string,
+): Promise<QuizSummary[]> {
+  const supabase = await createClient();
+  const { data: quizzes } = await supabase
+    .from("quizzes")
+    .select("id, title, is_final, max_attempts")
+    .eq("course_id", courseId);
+
+  const { data: attempts } = await supabase
+    .from("quiz_attempts")
+    .select("quiz_id, passed")
+    .eq("user_id", userId);
+
+  const byQuiz = new Map<string, { passed: boolean; count: number }>();
+  for (const a of attempts ?? []) {
+    const cur = byQuiz.get(a.quiz_id as string) ?? { passed: false, count: 0 };
+    cur.count += 1;
+    if (a.passed) cur.passed = true;
+    byQuiz.set(a.quiz_id as string, cur);
+  }
+
+  return (quizzes ?? [])
+    .map((q) => {
+      const st = byQuiz.get(q.id as string) ?? { passed: false, count: 0 };
+      return {
+        id: q.id as string,
+        title: q.title as string,
+        isFinal: q.is_final as boolean,
+        maxAttempts: (q.max_attempts as number | null) ?? null,
+        passed: st.passed,
+        attempts: st.count,
+      };
+    })
+    .sort((a, b) => Number(a.isFinal) - Number(b.isFinal) || a.title.localeCompare(b.title, "sv"));
+}
+
 export type SectionGate = { unlocked: boolean; complete: boolean };
 
 /**

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
-import { getCourseForTenant, getGatingState } from "@/lib/tenant/course";
+import Link from "next/link";
+import { getCourseForTenant, getGatingState, getCourseQuizzes } from "@/lib/tenant/course";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "./checkoff-button";
 
@@ -22,6 +23,7 @@ export default async function TenantCourse({
 
   const course = await getCourseForTenant(tenantId);
   const gating = course ? await getGatingState(course, user.id) : null;
+  const quizzes = course ? await getCourseQuizzes(course.id, user.id) : [];
 
   const totalSections = course?.modules.reduce((n, m) => n + m.sections.length, 0) ?? 0;
   const doneSections =
@@ -127,6 +129,50 @@ export default async function TenantCourse({
                 );
               })}
             </ol>
+
+            {quizzes.length > 0 && (
+              <section className="mt-10">
+                <h2 className="mb-4 font-[family-name:var(--t-mono)] text-xs uppercase tracking-[0.14em] text-[var(--t-muted)]">
+                  Prov
+                </h2>
+                <ul className="flex flex-col gap-2">
+                  {quizzes.map((q) => (
+                    <li
+                      key={q.id}
+                      className="flex items-center gap-3 rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] px-5 py-3 text-sm"
+                    >
+                      <span
+                        className={`text-[13px] ${q.passed ? "text-[var(--t-primary)]" : "text-[var(--t-muted)]"}`}
+                        aria-hidden
+                      >
+                        {q.passed ? "✓" : "•"}
+                      </span>
+                      <span className="text-[var(--t-text)]">{q.title}</span>
+                      {q.isFinal && (
+                        <span className="rounded-full bg-[var(--t-soft)] px-2 py-0.5 font-[family-name:var(--t-mono)] text-[10px] uppercase tracking-[0.08em] text-[var(--t-primary-dark)]">
+                          Slutprov
+                        </span>
+                      )}
+                      <span className="ml-auto flex items-center gap-3">
+                        {q.attempts > 0 && (
+                          <span className="font-[family-name:var(--t-mono)] text-[10px] text-[var(--t-muted)]">
+                            {q.passed ? "Godkänt" : `${q.attempts}${q.maxAttempts ? `/${q.maxAttempts}` : ""} försök`}
+                          </span>
+                        )}
+                        {!q.passed && !(q.maxAttempts !== null && q.attempts >= q.maxAttempts) && (
+                          <Link
+                            href={`/${tenant}/kurs/prov/${q.id}`}
+                            className="font-[family-name:var(--t-mono)] text-xs text-[var(--t-primary)] hover:underline"
+                          >
+                            {q.attempts > 0 ? "Gör om →" : "Ta provet →"}
+                          </Link>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </>
         )}
       </main>

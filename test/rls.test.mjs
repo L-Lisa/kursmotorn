@@ -51,31 +51,33 @@ test("Anna ser bara sin tenant; inget av tenant2", async () => {
   assert.equal(ffmq.data.length, 0, "Anna såg tenant2:s FFMQ");
 });
 
-test("Deltagardata isoleras A↔B (självseedad, städas)", async () => {
+test("Deltagardata isoleras A↔B (försök via rättningsfunktionen, städas)", async () => {
   const a = await signIn("anna@andning.test");
   const { quiz } = await anchors(a);
-  // Anna seedar ett eget försök
-  const ins = await a.from("quiz_attempts").insert({
-    tenant_id: "10000000-0000-0000-0000-000000000001",
-    quiz_id: quiz.id, user_id: A, answers: [0], score: 100, passed: true,
-  }).select("id").single();
-  assert.ok(!ins.error, `Anna kunde inte seeda eget försök: ${ins.error?.message}`);
+  // Anna seedar ett eget försök via den enda tillåtna vägen (server-side rättning).
+  const sub = await a.rpc("submit_quiz_attempt", { p_quiz_id: quiz.id, p_answers: {} });
+  assert.ok(!sub.error, `submit_quiz_attempt: ${sub.error?.message}`);
 
   const b = await signIn("bengt@andning.test");
   const bAtt = await b.from("quiz_attempts").select("user_id");
   assert.ok(bAtt.data.every((r) => r.user_id === B), "Bengt såg Annas försök");
 
-  await a.from("quiz_attempts").delete().eq("id", ins.data.id); // städa
+  const admin = await signIn("admin1@andning.test"); // admin städar (deltagare får ej radera försök)
+  await admin.from("quiz_attempts").delete().eq("user_id", A);
 });
 
-test("Anna kan inte skapa försök i Bengts namn (WITH CHECK)", async () => {
+test("Provintegritet: deltagare kan inte själv-inserta försök eller läsa facit", async () => {
   const a = await signIn("anna@andning.test");
   const { quiz } = await anchors(a);
-  const r = await a.from("quiz_attempts").insert({
+  // Direkt-insert av ett försök ska nekas (bara submit_quiz_attempt skriver → passed kan ej fejkas).
+  const ins = await a.from("quiz_attempts").insert({
     tenant_id: "10000000-0000-0000-0000-000000000001",
-    quiz_id: quiz.id, user_id: B, answers: [0], score: 0, passed: false,
+    quiz_id: quiz.id, user_id: A, answers: {}, score: 100, passed: true,
   });
-  assert.ok(r.error, "insert i annans namn borde blockeras");
+  assert.ok(ins.error, "deltagare kunde själv-inserta ett (fejkat) försök");
+  // Facit (correct_index) ska inte gå att läsa direkt.
+  const facit = await a.from("quiz_questions").select("correct_index").eq("quiz_id", quiz.id);
+  assert.equal(facit.data?.length ?? 0, 0, "deltagare kunde läsa facit direkt");
 });
 
 test("Tenant1-admin ser tenant1, aldrig tenant2", async () => {
