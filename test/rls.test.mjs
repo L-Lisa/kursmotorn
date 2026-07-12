@@ -18,6 +18,7 @@ const C = 'cccccccc-0000-0000-0000-000000000003'; // Cecilia, tenant2
 const T1_COURSE = '1c000000-0000-0000-0000-000000000001';
 const T2_COURSE = '2c000000-0000-0000-0000-000000000002';
 const QUIZ = '19000000-0000-0000-0000-000000000001';
+const SEC1 = '15000000-0000-0000-0000-000000000001'; // tenant1, sektion 1
 
 const mk = () => createClient(URL, ANON, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -109,4 +110,61 @@ test('practice_day dagsunik; guide_session inte', async () => {
   const g2 = await c.from('activity_logs').insert(gs);
   assert.ok(!g1.error && !g2.error, `två guide_session samma dag borde tillåtas: ${g1.error?.message || g2.error?.message}`);
   await lisa.from('activity_logs').delete().eq('user_id', C).eq('logged_date', '2026-06-10');
+});
+
+// ── Negativa skrivvägar (review-fynd 1, 2026-07-12) ──
+// Läs-isolation räcker inte: regressionsvakten måste fånga om en policy tappar sitt WITH CHECK
+// eller sin admin-gate. INSERT-nekande ger error; UPDATE/DELETE-nekande via USING ger 0 rader.
+
+test('Deltagare kan inte skriva config (courses/sections)', async () => {
+  const a = await signIn('anna@andning.test');
+  const ins = await a.from('courses')
+    .insert({ tenant_id: T1, work_name: 'hack', display_name: 'hack' });
+  assert.ok(ins.error, 'deltagare kunde skapa en kurs (config-write borde nekas)');
+
+  const upd = await a.from('sections').update({ title: 'hack' }).eq('id', SEC1).select();
+  assert.ok(!upd.error, upd.error?.message);
+  assert.equal(upd.data.length, 0, 'deltagare kunde uppdatera en sektion (0 rader förväntat)');
+});
+
+test('Deltagare kan inte höja sin egen roll (memberships m_write)', async () => {
+  const a = await signIn('anna@andning.test');
+  const upd = await a.from('memberships')
+    .update({ role: 'admin' }).eq('user_id', A).eq('tenant_id', T1).select();
+  assert.ok(!upd.error, upd.error?.message);
+  assert.equal(upd.data.length, 0, 'deltagare kunde göra sig till admin (0 rader förväntat)');
+});
+
+test('Deltagare kan inte skapa upload/attempt i annans namn (WITH CHECK)', async () => {
+  const a = await signIn('anna@andning.test');
+  const up = await a.from('uploads').insert({
+    tenant_id: T1, user_id: B, section_id: SEC1,
+    storage_path: `${T1}/${B}/${SEC1}/x.mp4`, size_bytes: 1,
+  });
+  assert.ok(up.error, 'deltagare kunde skapa upload-rad i annans namn');
+
+  const del = await a.from('section_progress').delete().eq('user_id', B).select();
+  assert.ok(!del.error, del.error?.message);
+  assert.equal(del.data.length, 0, 'deltagare kunde radera annans progress (0 rader förväntat)');
+});
+
+test('Tenant1-admin kan inte skriva in i tenant2 (cross-tenant WITH CHECK)', async () => {
+  const d = await signIn('admin1@andning.test');
+  const ins = await d.from('courses')
+    .insert({ tenant_id: T2, work_name: 'x', display_name: 'x' });
+  assert.ok(ins.error, 'tenant1-admin kunde skapa en kurs i tenant2');
+});
+
+test('Storage path-prefix: egen mapp OK, annans nekad', async () => {
+  const a = await signIn('anna@andning.test');
+  const buf = Buffer.from('test');
+  const foreign = `${T1}/${B}/${SEC1}/x.txt`;       // Bengts prefix → nekad
+  const own = `${T1}/${A}/${SEC1}/x.txt`;            // Annas eget prefix → OK
+
+  const bad = await a.storage.from('recordings').upload(foreign, buf, { upsert: true });
+  assert.ok(bad.error, 'Anna kunde ladda upp till Bengts prefix');
+
+  const good = await a.storage.from('recordings').upload(own, buf, { upsert: true });
+  assert.ok(!good.error, `Anna kunde inte ladda upp till eget prefix: ${good.error?.message}`);
+  await a.storage.from('recordings').remove([own]); // städa
 });
