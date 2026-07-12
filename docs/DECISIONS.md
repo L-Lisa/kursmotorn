@@ -81,4 +81,9 @@ Lisa bad om en granskning av fundamentet före fas 2. Grindarna omkördes skarpt
 - RLS-sviten **12/12** grön mot live-DB · hemlighetsgrind **0** · build grön · namnbytes-grep (`mindfulnessguiden|andningskursen|respira` i `src/`) = **0** · inga priser/procent i `src/`.
 
 ### Öppet in i fas 3
-- Host-/subdomän-routning (öppen sedan fas 0) · fynd 5 (practice_day-unikhet, före fas 7) · fynd 6 (bild-/kursmedia-buckets — byggs i fas 3 med kursimporten) · fynd 3 (ren `supabase db reset` — Docker, blockerande före eject/go-live, **fortsatt synligt öppet**) · WCAG-punkten ovan väntar Lisas beslut.
+- Host-/subdomän-routning (öppen sedan fas 0) · fynd 5 (practice_day-unikhet, före fas 7) · fynd 6 (bild-/kursmedia-buckets — byggs i fas 3 med kursimporten) · WCAG-punkten LÖST (Lisa accepterade 4.03).
+
+## 2026-07-12 — Fynd 3 STÄNGT + lokal Docker-dev-miljö
+- **`supabase db reset` körd rent i lokal Docker-stack** (Lisa startade Docker Desktop): alla sex migrationer (01–06) applicerade från noll + `seed.sql` inläst utan fel. Verifierat: 5 `.test`-konton, 2 tenants/brands/courses, `tenant_public_brand()` returnerar rad. **Fynd 3 (ACCEPTANCE fas 0–1: "supabase db reset + seed går igenom rent") är därmed uppfyllt** — reproducerbarheten bevisad mot ren DB, inte bara mot en applicerad fjärr.
+- **Arbetsmodell fas 3+:** lokal Docker-DB = gratis scratchpad för iterering (import, gating); det betalda fjärrprojektet (`lsqfsntwnvquakmqeryn`, €25/mån Pro) rörs bara när en fas är solid, på Lisas OK. Lokalt begränsar inget vi bygger (ingen hosted-only-funktion i scope).
+- **Namngivning (Lisas instruktion):** `config.toml` `project_id` "app" → **"kursmotorn"** så Docker-containrarna heter `supabase_*_kursmotorn` (inte det intetsägande `_app`). Regel framåt: namnge alltid resurser Lisa ser i en UI beskrivande.
