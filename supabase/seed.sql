@@ -36,9 +36,38 @@ insert into public.tenants (id, slug, status, plan) values
   ('10000000-0000-0000-0000-000000000001', 'andningskursen',   'active', 'subscription'),
   ('20000000-0000-0000-0000-000000000002', 'mindfulnessguiden','active', 'subscription');
 
+-- Fullständig brand-spec per demo-tenant (schema = system/templates/brand-spec.md).
+-- Tokens ordagrant ur ../brand.md (LÅST). Tenant #1 = palett A; tenant #2 = MG Editorial Lugn (återges exakt).
+-- primary_dark för MG är en härledd mörkare Ink-nyans (används bara på certifikatytor, fas 5) — noterat i DECISIONS.
 insert into public.tenant_brands (tenant_id, brand_spec) values
-  ('10000000-0000-0000-0000-000000000001', '{"display_name":"Andningskursen","colors":{"accent":"#2F5D62"}}'::jsonb),
-  ('20000000-0000-0000-0000-000000000002', '{"display_name":"Mindfulnessguiden","colors":{"accent":"#3A4A3F"}}'::jsonb);
+  ('10000000-0000-0000-0000-000000000001', '{
+    "tenant_name": "Andningskursen",
+    "display_name": "Andningskursen",
+    "course_name": "Andningskursen",
+    "certificate_title": "Certifierad andningsguide",
+    "tagline": "En lugn, evidensledd väg till medveten andning.",
+    "org_info": {"legal_name": "", "org_nr": "", "website": "", "contact": ""},
+    "colors": {"bg": "#F6F3ED", "card": "#FFFFFF", "primary": "#1F5F5B", "primary_dark": "#15403D", "text": "#25302E", "muted": "#6E7A76", "accent": "#A8894B", "soft": "#E9E2D3"},
+    "fonts": {"serif": "Lora", "sans": "Inter", "mono": "JetBrains Mono"},
+    "voice": {"tone_words": ["lugn", "varm", "evidensledd"], "address": "du", "language": "sv", "sample_lines": ["Din inspelning är uppladdad. Nästa modul är upplåst.", "Ta det i din egen takt — andningen väntar."], "avoid": ["hype", "medicinska överdrifter", "esoterik"]},
+    "logo_url": null,
+    "certificate": {"issuer_text": "Andningskursen", "signature_name": "", "signature_title": "", "expires": null},
+    "domain": {"subdomain": "andningskursen", "custom_domain": null}
+  }'::jsonb),
+  ('20000000-0000-0000-0000-000000000002', '{
+    "tenant_name": "Mindfulnessguiden",
+    "display_name": "Mindfulnessguiden",
+    "course_name": "Certifierad Mindfulnessguide",
+    "certificate_title": "Certifierad mindfulnessguide",
+    "tagline": "Mindfulness presenterad som en vuxen idé — inte en livsstilsprodukt.",
+    "org_info": {"legal_name": "", "org_nr": "", "website": "mindfulnessguiden.se", "contact": ""},
+    "colors": {"bg": "#F7F4EE", "card": "#FFFFFF", "primary": "#1A2942", "primary_dark": "#0F1B30", "text": "#1A2942", "muted": "#5A6273", "accent": "#8B6F3F", "soft": "#EFE9DD"},
+    "fonts": {"serif": "Fraunces", "sans": "Source Sans 3", "mono": "Geist Mono"},
+    "voice": {"tone_words": ["thoughtful", "adult", "editorial"], "address": "du", "language": "sv", "sample_lines": ["Loggen är kvittot, inte piskan.", "Andas ut. En vecka i taget."], "avoid": ["spa-estetik", "pastellgradienter", "maskotar", "dark mode"]},
+    "logo_url": null,
+    "certificate": {"issuer_text": "Mindfulnessguiden", "signature_name": "", "signature_title": "", "expires": null},
+    "domain": {"subdomain": "mindfulnessguiden", "custom_domain": null}
+  }'::jsonb);
 
 -- ── Memberships ──
 insert into public.memberships (user_id, tenant_id, role) values
