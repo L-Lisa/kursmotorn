@@ -105,3 +105,21 @@ Lisa bad om en granskning av fundamentet före fas 2. Grindarna omkördes skarpt
 
 ### Öppet in i fas 4
 - Prov-motorn (ta prov, rätta, 80 %-tröskel, omtag) — då blir per-modul-proven interaktiva och slutprovet gatar certifikatet (fas 5). · MP4-uppladdning (TUS, stora filer) — då blir 🎥-sektionernas `upload_required` uppfyllbart i UI · media-buckets (fynd 6) byggs med uppladdningen · host-routning (SPEC §5) fortsatt öppen · fjärr-DB-synk vid milstolpe.
+
+## 2026-07-12 — Fas 4: prov-motor + MP4/TUS-uppladdning (commits `1861204`, `ccb74f1`)
+
+### Prov-motorn (facit-säker) — migration `..07`
+- **Provintegritet som säkerhetskrav, inte bara UX.** Deltagaren får ALDRIG läsa `correct_index`/`explanation`, och får inte själv skriva `quiz_attempts` (annars kunde `passed=true` fejkas → kringgå certkravet i fas 5). Lösning: `qq_read` → **admin-only**; `qa_insert_own` **borttagen**. Deltagaren läser frågor via `get_quiz()` (SECURITY DEFINER, utan facit) och rättas i `submit_quiz_attempt()` (SECURITY DEFINER, läser facit server-side, respekterar `max_attempts` + `pass_threshold`, skapar attempt). Admin behåller full åtkomst (rättning/nollställning via `qa_admin`).
+- **Provmappning bekräftad:** per-modul-prov = `is_final=false` (självkoll, gatar inte); slutprovet (modul 9) = `is_final=true` → cert-villkoret `final_quiz_pass` (fas 5). Verifierat: facit läcker ej, direktläsning av `quiz_questions` ger 0 rader för deltagare, scoring 100 %/75 %, `max_attempts=3` avvisar 4:e försöket, fejkad direkt-insert nekas.
+- UI: `/[tenant]/kurs/prov/[quizId]` (frågor via `get_quiz`, inlämning via server-action → `submit_quiz_attempt`), resultat + omtag, prov-block i kursvyn. Facit stannar server-side hela vägen.
+
+### MP4/TUS-uppladdning — migration `..08` + config
+- **recordings-bucket:** `file_size_limit` höjt till **2 GB** + `allowed_mime_types` = video (migration `..08`); lokal `config.toml [storage] file_size_limit` → `2GiB`. Motorns marknadssärskiljare (benchmarken: konkurrenter kapar vid 10–100 MB).
+- **`UploadControl`** (klient, `tus-js-client`, 6 MB-chunkar, resumable) laddar till path `<tenant>/<user>/<section>/<fil>`; storage-RLS (migration `..03`) gatar prefixet. Vid klar uppladdning → `recordUpload`-åtgärd (gating enforce:as: bara upplåst 🎥-sektion + rätt prefix) skapar `uploads`-raden → sektionen klar → nästa modul öppnas (samma gating-kärna).
+- **Skarp verifiering (SPEC §5, "kunde inte testas i Cowork"):** 1 GB laddades upp via TUS på **26 s** (1024 MB-objekt bekräftat i storage); uppladdning till annans prefix **NEKAD** av RLS. Signerade URL:er för återuppspelning = fas 5 (verify/admin-visning).
+
+### GRIND 4 kvitto
+- Prov: scoring 100/75, `max_attempts` avvisar, facit-säkert, cheat-insert nekad · TUS 1 GB + path-prefix-isolation · upload→sektion-klar→nästa (gating enhetstestad) · **RLS-sviten omskriven för nya skrivvägar (försök via funktion, facit gömt) 10/10** · test:gating 5/5 · db reset + import rent · build grön · hemlighetsgrind 0.
+
+### Öppet in i fas 5
+- Certifiering: `course_certificate_requirements` + utfärdande-serverfunktion (läser typade krav: sections_complete + final_quiz_pass + attestation) · attestation (heder-och-samvete, versionerad) · certifikat-PDF ur tenant-brand (verktygsval → DECISIONS, å/ä/ö-test) + publik `/verify/<slug>` · signerade URL:er för uppladdad media · **breathworks-regressionen blir grind från fas 5**. Fjärr-DB-synk vid visningsbar milstolpe (Lisas push-OK).
