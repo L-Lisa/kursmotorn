@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:rls": "node --env-file=.env.local --test test/rls.test.mjs"
+    "test:rls": "node --env-file=.env.local --test test/rls.test.mjs",
+    "test:rls:local": "node --env-file=.env.development.local --test test/rls.test.mjs",
+    "import": "node --env-file=.env.development.local scripts/import-course.mjs",
+    "import:remote": "node --env-file=.env.local scripts/import-course.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

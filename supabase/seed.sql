@@ -83,25 +83,10 @@ insert into public.courses (id, tenant_id, work_name, display_name, certificate_
   ('1c000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'andning-v1', 'Andningskursen', 'Certifierad andningsguide', 'self_paced', 'published'),
   ('2c000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', 'mg-v1', 'Mindfulnessguiden', 'Certifierad mindfulnessguide', 'self_paced', 'published');
 
--- Moduler + sektioner (tenant 1)
-insert into public.modules (id, tenant_id, course_id, position, title) values
-  ('1d000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 1, 'Modul 1 — Grund');
-insert into public.sections (id, tenant_id, module_id, position, title, content, requirements) values
-  ('15000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '1d000000-0000-0000-0000-000000000001', 1, 'Sektion 1', 'Text 1', '{"checkoff": true, "quiz_id": null, "upload_required": false}'::jsonb),
-  ('15000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '1d000000-0000-0000-0000-000000000001', 2, 'Sektion 2', 'Text 2', '{"checkoff": false, "quiz_id": null, "upload_required": true}'::jsonb);
-
--- Modul + sektion (tenant 2)
-insert into public.modules (id, tenant_id, course_id, position, title) values
-  ('2d000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', 1, 'Vecka 1');
-insert into public.sections (id, tenant_id, module_id, position, title, content) values
-  ('25000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', '2d000000-0000-0000-0000-000000000002', 1, 'V1', 'MG text');
-
--- Prov (tenant 1, slutprov)
-insert into public.quizzes (id, tenant_id, course_id, section_id, title, pass_threshold, max_attempts, is_final) values
-  ('19000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', null, 'Slutprov', 80, 3, true);
-insert into public.quiz_questions (tenant_id, quiz_id, position, question, options, correct_index) values
-  ('10000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 1, 'Fråga 1?', '["a","b","c"]'::jsonb, 0),
-  ('10000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 2, 'Fråga 2?', '["a","b","c"]'::jsonb, 2);
+-- Kursinnehåll (moduler/sektioner/prov) SEEDAS INTE här — det importeras ordagrant
+-- från kurs/modul-N.md via `npm run import` (fas 3). Seeden ger bara scaffolding
+-- (tenants, användare, kurser, kohorter, enrollments, villkor). Andningskursen fylls
+-- av importen; MG-kursen (2c…) fylls i fas 7. Så hålls innehållet på ETT ställe.
 
 -- Certifikatvillkor (tenant 1, breathworks-trion)
 insert into public.course_certificate_requirements (tenant_id, course_id, position, type, config) values
@@ -126,24 +111,7 @@ insert into public.enrollments (tenant_id, user_id, cohort_id, course_id, starts
   ('10000000-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002', '1a000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', '2026-06-01', 'Beta AB'),
   ('20000000-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000003', '2a000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', '2026-06-01', null);
 
--- Deltagardata (tenant 1): Anna (A) och Bengt (B) — testar isolation A<->B
-insert into public.section_progress (tenant_id, user_id, section_id) values
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '15000000-0000-0000-0000-000000000001');
-insert into public.quiz_attempts (tenant_id, quiz_id, user_id, answers, score, passed) values
-  ('10000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '[0,2]'::jsonb, 100, true),
-  ('10000000-0000-0000-0000-000000000001', '19000000-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002', '[1,1]'::jsonb, 40, false);
-insert into public.uploads (tenant_id, user_id, section_id, storage_path, size_bytes) values
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '15000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001/aaaaaaaa-0000-0000-0000-000000000001/15000000-0000-0000-0000-000000000002/rec.mp4', 1048576);
-insert into public.activity_logs (tenant_id, user_id, course_id, cohort_id, log_type, logged_date, source) values
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', '1a000000-0000-0000-0000-000000000001', 'practice_day', '2026-06-02', 'auto'),
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', '1a000000-0000-0000-0000-000000000001', 'practice_day', '2026-06-03', 'manual');
-insert into public.attestations (tenant_id, user_id, course_id, type, statement_text) values
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 'live_session_honor', 'Jag intygar att jag genomfört en live-session.');
-insert into public.certificates (tenant_id, user_id, course_id, holder_name, verify_slug) values
-  ('10000000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 'Anna Andersson', 'anna-andning-0001');
-
--- Deltagardata (tenant 2): Cecilia (C)
-insert into public.mg_guide_status (tenant_id, user_id, level) values
-  ('20000000-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000003', 'deltagare');
-insert into public.mg_ffmq_responses (tenant_id, user_id, cohort_id, occasion, answers, total_score) values
-  ('20000000-0000-0000-0000-000000000002', 'cccccccc-0000-0000-0000-000000000003', '2a000000-0000-0000-0000-000000000002', 'pre', '{"q1":3}'::jsonb, 45);
+-- Deltagardata (progress, prov, uppladdningar, loggar, certifikat, FFMQ) SEEDAS INTE.
+-- RLS-regressionssviten seedar sina egna fiktiva rader vid körning och städar upp efter
+-- sig (content-agnostisk isolationstest) — så bryts inget när importen byter kursinnehåll.
+-- Import-skriptet kan lägga in en liten demo-progress för Anna (kursvyns skärmdumpar).
