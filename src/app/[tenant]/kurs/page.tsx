@@ -180,6 +180,23 @@ export default async function TenantCourse({
                 </ul>
               </section>
             )}
+
+            <section className="mt-10 flex items-center justify-between rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] px-5 py-4">
+              <div>
+                <p className="font-[family-name:var(--t-serif)] text-[15px] text-[var(--t-text)]">
+                  Certifiering
+                </p>
+                <p className="font-[family-name:var(--t-mono)] text-[11px] text-[var(--t-muted)]">
+                  Krav, intyg och ditt certifikat
+                </p>
+              </div>
+              <Link
+                href={`/${tenant}/kurs/intyg`}
+                className="font-[family-name:var(--t-mono)] text-xs text-[var(--t-primary)] hover:underline"
+              >
+                Gå till certifiering →
+              </Link>
+            </section>
           </>
         )}
       </main>

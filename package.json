@@ -11,9 +11,12 @@
     "test:rls:local": "node --env-file=.env.development.local --test test/rls.test.mjs",
     "import": "node --env-file=.env.development.local scripts/import-course.mjs",
     "import:remote": "node --env-file=.env.local scripts/import-course.mjs",
-    "test:gating": "node --import tsx --test test/gating.test.ts"
+    "test:gating": "node --import tsx --test test/gating.test.ts",
+    "test:certification": "node --env-file=.env.local --test test/certification.test.mjs",
+    "test:certification:local": "node --env-file=.env.development.local --test test/certification.test.mjs"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.109.0",
     "class-variance-authority": "^0.7.1",
