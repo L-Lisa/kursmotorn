@@ -1,0 +1,49 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
+import { getCourseForTenant, getGatingState, sectionsInOrder } from "@/lib/tenant/course";
+
+type Result = { ok: boolean; error?: string };
+
+/**
+ * Bockar av / bockar ur en sektion. Gating ENFORCE:as server-side här — inte i
+ * klienten (SPEC §2.3). En låst sektion kan aldrig bockas av, oavsett vad klienten
+ * skickar. Provregeln följer med eftersom gating-kärnan är samma som i vyn.
+ */
+export async function toggleSection(tenant: string, sectionId: string): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "ej inloggad" };
+
+  const { tenantId } = await getTenantContext(tenant);
+  const course = await getCourseForTenant(tenantId);
+  if (!course) return { ok: false, error: "ingen kurs" };
+
+  const section = sectionsInOrder(course).find((s) => s.id === sectionId);
+  if (!section) return { ok: false, error: "okänd sektion" };
+  if (!section.requirements?.checkoff) return { ok: false, error: "sektionen bockas inte av manuellt" };
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("section_progress")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("section_id", sectionId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("section_progress").delete().eq("id", existing.id);
+  } else {
+    // Enforce gating: bara en upplåst sektion får bockas av.
+    const gate = (await getGatingState(course, user.id)).get(sectionId);
+    if (!gate?.unlocked) return { ok: false, error: "sektionen är låst" };
+    const { error } = await supabase
+      .from("section_progress")
+      .insert({ tenant_id: tenantId, user_id: user.id, section_id: sectionId });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  revalidatePath(`/${tenant}/kurs`);
+  return { ok: true };
+}
