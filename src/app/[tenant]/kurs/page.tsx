@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCourseForTenant, getGatingState, getCourseQuizzes } from "@/lib/tenant/course";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "./checkoff-button";
+import { UploadControl } from "./upload-control";
 
 /**
  * Inloggad, tenant-brandad kursvy (fas 3). Renderar strukturen + avbockning +
@@ -112,8 +113,14 @@ export default async function TenantCourse({
                             )}
                             <span>{s.title.replace(/^Sektion\s+\S+\s+/, "")}</span>
                             {req.upload_required && (
-                              <span className="ml-auto rounded-full bg-[var(--t-soft)] px-2 py-0.5 font-[family-name:var(--t-mono)] text-[10px] uppercase tracking-[0.08em] text-[var(--t-primary-dark)]">
-                                Inspelning
+                              <span className="ml-auto">
+                                <UploadControl
+                                  tenant={tenant}
+                                  tenantId={tenantId}
+                                  sectionId={s.id}
+                                  complete={!!g?.complete}
+                                  locked={locked}
+                                />
                               </span>
                             )}
                             {req.quiz_id && (

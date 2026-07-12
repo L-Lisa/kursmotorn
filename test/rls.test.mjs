@@ -118,11 +118,12 @@ test("Cross-tenant: tenant1-admin kan inte skriva in i tenant2", async () => {
 test("Storage path-prefix: egen mapp OK, annans nekad", async () => {
   const a = await signIn("anna@andning.test");
   const buf = Buffer.from("t");
+  const opts = { upsert: true, contentType: "video/mp4" }; // bucketen tillåter bara video
   const T1 = "10000000-0000-0000-0000-000000000001";
-  const bad = await a.storage.from("recordings").upload(`${T1}/${B}/x/x.txt`, buf, { upsert: true });
+  const bad = await a.storage.from("recordings").upload(`${T1}/${B}/x/x.mp4`, buf, opts);
   assert.ok(bad.error, "Anna kunde ladda upp till Bengts prefix");
-  const own = `${T1}/${A}/x/x.txt`;
-  const good = await a.storage.from("recordings").upload(own, buf, { upsert: true });
+  const own = `${T1}/${A}/x/x.mp4`;
+  const good = await a.storage.from("recordings").upload(own, buf, opts);
   assert.ok(!good.error, `Anna kunde inte ladda upp till eget prefix: ${good.error?.message}`);
   await a.storage.from("recordings").remove([own]);
 });

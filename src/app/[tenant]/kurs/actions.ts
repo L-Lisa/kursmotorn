@@ -47,3 +47,44 @@ export async function toggleSection(tenant: string, sectionId: string): Promise<
   revalidatePath(`/${tenant}/kurs`);
   return { ok: true };
 }
+
+/**
+ * Registrerar en klar MP4-uppladdning (metadataraden). Filen är redan uppladdad till
+ * Storage via TUS på path <tenant>/<user>/<section>/... (storage-RLS gatar prefixet).
+ * Gating ENFORCE:as: bara en upplåst uppladdningssektion får registreras.
+ */
+export async function recordUpload(
+  tenant: string,
+  sectionId: string,
+  storagePath: string,
+  sizeBytes: number,
+): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "ej inloggad" };
+
+  const { tenantId } = await getTenantContext(tenant);
+  const course = await getCourseForTenant(tenantId);
+  if (!course) return { ok: false, error: "ingen kurs" };
+
+  const section = sectionsInOrder(course).find((s) => s.id === sectionId);
+  if (!section?.requirements?.upload_required) return { ok: false, error: "ej uppladdningssektion" };
+  if (!storagePath.startsWith(`${tenantId}/${user.id}/${sectionId}/`)) {
+    return { ok: false, error: "fel path-prefix" };
+  }
+
+  const gate = (await getGatingState(course, user.id)).get(sectionId);
+  if (!gate?.unlocked) return { ok: false, error: "sektionen är låst" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("uploads").insert({
+    tenant_id: tenantId,
+    user_id: user.id,
+    section_id: sectionId,
+    storage_path: storagePath,
+    size_bytes: sizeBytes,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/${tenant}/kurs`);
+  return { ok: true };
+}
