@@ -58,6 +58,8 @@
 - [ ] FFMQ-scoring ger identiskt resultat som sajtens självtest för 3 kända testfall (efter att Lisa pekat ut källfilen).
 - [ ] MG-import: C-FINAL v1–9 ordagrant (diff mot källfiler); nio uppladdningssektioner V1–V9 identifierade och konfigurerade i certvillkoren (min_per_section: 1 — nio versioner av samma övning uppfyller INTE kravet).
 - [ ] Radering av deltagare kaskaderar (loggar, FFMQ, uploads inkl. Storage, attempts; certifikat revokeras).
+- [ ] MG-tenanten renderas i **Stilla kraft** (tokens diffade mot 01-DESIGN-SYSTEM.md; inga Editorial Lugn-värden kvar i tenant_brands för MG); WCAG AA på nya kombinationer.
+- [ ] Lisas granskningskonto: inloggning → veckovy → samtliga nio veckor läsbara, ordagrant mot C-FINAL (stickprov 3 veckor).
 - [ ] **Breathworks-regressionen (fas 5-sviten) passerar igen oförändrad.**
 
 ## Fas 8 — Eject
