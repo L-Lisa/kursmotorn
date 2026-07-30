@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
 import Link from "next/link";
-import { getCourseForTenant, getGatingState, getCourseQuizzes } from "@/lib/tenant/course";
+import { getCourseForTenant, getGatingState, getCourseQuizzes, getCourseLogTypes } from "@/lib/tenant/course";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "./checkoff-button";
 import { UploadControl } from "./upload-control";
@@ -25,6 +25,9 @@ export default async function TenantCourse({
   const course = await getCourseForTenant(tenantId);
   const gating = course ? await getGatingState(course, user.id) : null;
   const quizzes = course ? await getCourseQuizzes(course.id, user.id) : [];
+  const logTypes = course ? await getCourseLogTypes(course.id) : [];
+  const hasPracticeLog = logTypes.some((t) => t.logType === "practice_day");
+  const hasGuideLog = logTypes.some((t) => t.logType === "guide_session");
 
   const totalSections = course?.modules.reduce((n, m) => n + m.sections.length, 0) ?? 0;
   const doneSections =
@@ -57,10 +60,31 @@ export default async function TenantCourse({
             <h1 className="mb-3 font-[family-name:var(--t-serif)] text-4xl text-[var(--t-text)]">
               {course.displayName}
             </h1>
-            <p className="mb-10 font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
+            <p className="mb-4 font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
               {doneSections}/{totalSections} avbockade ·{" "}
               {course.unlockMode === "scheduled" ? "schemalagd" : "egen takt"}
             </p>
+            {(hasPracticeLog || hasGuideLog) && (
+              <p className="mb-10 flex gap-5">
+                {hasPracticeLog && (
+                  <Link
+                    href={`/${tenant}/kurs/logg`}
+                    className="font-[family-name:var(--t-mono)] text-xs text-[var(--t-primary)] hover:underline"
+                  >
+                    Praxislogg →
+                  </Link>
+                )}
+                {hasGuideLog && (
+                  <Link
+                    href={`/${tenant}/kurs/guideresa`}
+                    className="font-[family-name:var(--t-mono)] text-xs text-[var(--t-primary)] hover:underline"
+                  >
+                    Min guideresa →
+                  </Link>
+                )}
+              </p>
+            )}
+            {!hasPracticeLog && !hasGuideLog && <div className="mb-6" />}
 
             <ol className="flex flex-col gap-4">
               {course.modules.map((m) => {
@@ -75,7 +99,9 @@ export default async function TenantCourse({
                         {String(m.position).padStart(2, "0")}
                       </span>
                       <h2 className="font-[family-name:var(--t-serif)] text-xl text-[var(--t-text)]">
-                        {m.title.replace(/^Modul\s+\d+\s+—\s+/, "")}
+                        <Link href={`/${tenant}/kurs/vecka/${m.id}`} className="hover:underline">
+                          {m.title.replace(/^Modul\s+\d+\s+—\s+/, "")}
+                        </Link>
                       </h2>
                       <span className="ml-auto font-[family-name:var(--t-mono)] text-[10px] text-[var(--t-muted)]">
                         {done}/{m.sections.length}

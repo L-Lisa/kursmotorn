@@ -5,12 +5,15 @@ import {
   Fraunces,
   Source_Sans_3,
   Geist_Mono,
+  Newsreader,
+  Manrope,
 } from "next/font/google";
 
 /**
  * Alla teckensnitt self-hostas via next/font (inga externa anrop i drift).
  * Motorns yta: Inter + JetBrains Mono (../brand.md "Varma maskinrummet").
- * Tenant-serifer (laddade för demo-brandsen): Lora · Fraunces · Source Sans 3 · Geist Mono.
+ * Tenant-serifer (laddade för demo-brandsen): Lora · Fraunces · Source Sans 3 · Geist Mono ·
+ * Newsreader + Manrope (tillagda för tenant-brands i fas 7).
  *
  * v1-begränsning (loggad i DECISIONS): next/font kräver statiska importer, så
  * en tenant kan bara välja bland de laddade familjerna. Okänt fontnamn faller
@@ -22,9 +25,11 @@ export const lora = Lora({ subsets: ["latin"], variable: "--font-lora", display:
 export const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
 export const sourceSans = Source_Sans_3({ subsets: ["latin"], variable: "--font-source-sans", display: "swap" });
 export const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
+export const newsreader = Newsreader({ subsets: ["latin"], variable: "--font-newsreader", display: "swap" });
+export const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 
 /** Alla font-variabler i en className för <html>. */
-export const fontClassNames = [inter, jetbrainsMono, lora, fraunces, sourceSans, geistMono]
+export const fontClassNames = [inter, jetbrainsMono, lora, fraunces, sourceSans, geistMono, newsreader, manrope]
   .map((f) => f.variable)
   .join(" ");
 
@@ -36,6 +41,8 @@ const FONT_VAR_BY_NAME: Record<string, string> = {
   Fraunces: "var(--font-fraunces)",
   "Source Sans 3": "var(--font-source-sans)",
   "Geist Mono": "var(--font-geist-mono)",
+  Newsreader: "var(--font-newsreader)",
+  Manrope: "var(--font-manrope)",
 };
 
 export function fontVar(name: string | undefined, fallback: string): string {

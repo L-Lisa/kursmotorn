@@ -134,6 +134,28 @@ export async function getCourseQuizzes(
     .sort((a, b) => Number(a.isFinal) - Number(b.isFinal) || a.title.localeCompare(b.title, "sv"));
 }
 
+export type LogTypeDef = {
+  logType: string;
+  label: string;
+  dailyUnique: boolean;
+  manualWindowDays: number | null;
+};
+
+/** Kursens loggtyper (typregistret). Styr vilka logg-vyer som visas — konfig, inte tenant. */
+export async function getCourseLogTypes(courseId: string): Promise<LogTypeDef[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("log_type_defs")
+    .select("log_type, label, daily_unique, manual_window_days")
+    .eq("course_id", courseId);
+  return (data ?? []).map((d) => ({
+    logType: d.log_type as string,
+    label: d.label as string,
+    dailyUnique: d.daily_unique as boolean,
+    manualWindowDays: (d.manual_window_days as number | null) ?? null,
+  }));
+}
+
 export type SectionGate = { unlocked: boolean; complete: boolean };
 
 /**

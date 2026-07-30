@@ -77,3 +77,20 @@ test("PROVREGELN scheduled: tid låser aldrig upp förbi underkänt prov", () =>
   const ok = computeGating({ unlockMode: "scheduled", sections, cohortStart, today: new Date("2026-07-01T00:00:00Z"), progress: p });
   assert.equal(ok[1].unlocked, true, "s2 öppen när provet godkänts och tiden gått");
 });
+
+test("valfri sektion (optional) blockerar inte nästa i self_paced men förblir oavslutad", () => {
+  const sections = secs([
+    { id: "a" },
+    { id: "b", req: { upload_required: true, optional: true } },
+    { id: "c" },
+  ]);
+  const state = computeGating({
+    unlockMode: "self_paced",
+    sections,
+    progress: { completedSectionIds: new Set(["a"]), passedQuizIds: new Set(), uploadedSectionIds: new Set() },
+  });
+  const byId = new Map(state.map((s) => [s.id, s]));
+  assert.equal(byId.get("b")!.unlocked, true);
+  assert.equal(byId.get("b")!.complete, false, "valfri utan uppladdning är fortfarande oavslutad");
+  assert.equal(byId.get("c")!.unlocked, true, "valfri sektion släpper förbi sekvensen");
+});

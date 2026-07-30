@@ -216,6 +216,28 @@ export async function saveBrandSpec(slug: string, form: FormData): Promise<Resul
   return { ok: true };
 }
 
+/**
+ * GDPR-radering av deltagare (fas 7). Endast PLATTFORMSADMIN (Lisas åtgärd i v1).
+ * Certifikat revokeras + anonymiseras, Storage-objekt raderas, auth-kontot tas
+ * bort (DB-kaskaden tar resten). Ingen extern effekt.
+ */
+export async function deleteParticipant(slug: string, userId: string): Promise<Result> {
+  const { tenantId, userId: adminId } = await requireTenantAdmin(slug);
+  if (userId === adminId) return { ok: false, error: "du kan inte radera dig själv" };
+
+  const supabase = await createClient();
+  const { data: isPlatformAdmin } = await supabase.rpc("is_platform_admin");
+  if (!isPlatformAdmin) return { ok: false, error: "endast plattformsadmin kan radera deltagare" };
+
+  const { createServiceClient } = await import("@/lib/supabase/service");
+  const { deleteParticipantData } = await import("@/lib/admin/delete-participant");
+  const res = await deleteParticipantData(createServiceClient(), tenantId, userId);
+  if (!res.ok) return { ok: false, error: res.error };
+
+  revalidatePath(`/admin/${slug}`);
+  return { ok: true };
+}
+
 /** Manuell fakturerad/betald-markering — kan sättas OCH ångras (ingen extern effekt). */
 export async function setEnrollmentMark(
   slug: string,

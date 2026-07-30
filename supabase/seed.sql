@@ -20,7 +20,8 @@ from (values
   ('dddddddd-0000-0000-0000-000000000004'::uuid, 'admin1@andning.test',  'Andningskursens admin'),
   ('aaaaaaaa-0000-0000-0000-000000000001'::uuid, 'anna@andning.test',    'Anna Öberg'),
   ('bbbbbbbb-0000-0000-0000-000000000002'::uuid, 'bengt@andning.test',   'Bengt Nordin'),
-  ('cccccccc-0000-0000-0000-000000000003'::uuid, 'cecilia@mind.test',    'Cecilia Ahlgren')
+  ('cccccccc-0000-0000-0000-000000000003'::uuid, 'cecilia@mind.test',    'Cecilia Ahlgren'),
+  ('eeeeeeee-0000-0000-0000-000000000005'::uuid, 'granskning@mind.test', 'Lisas granskningskonto')
 ) as u(id, email, name);
 
 insert into auth.identities
@@ -29,7 +30,7 @@ select gen_random_uuid(), u.id, u.id::text,
        jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
        'email', now(), now(), now()
 from auth.users u
-where u.email in ('lisa@kursmotorn.test','admin1@andning.test','anna@andning.test','bengt@andning.test','cecilia@mind.test');
+where u.email in ('lisa@kursmotorn.test','admin1@andning.test','anna@andning.test','bengt@andning.test','cecilia@mind.test','granskning@mind.test');
 
 -- ── Plattformsadmin (Lisa) ──
 insert into public.platform_admins (user_id) values ('11111111-1111-1111-1111-111111111111');
@@ -64,13 +65,18 @@ insert into public.tenant_brands (tenant_id, brand_spec) values
     "certificate_title": "Certifierad mindfulnessguide",
     "tagline": "Mindfulness presenterad som en vuxen idé — inte en livsstilsprodukt.",
     "org_info": {"legal_name": "", "org_nr": "", "website": "mindfulnessguiden.se", "contact": ""},
-    "colors": {"bg": "#F7F4EE", "card": "#FFFFFF", "primary": "#1A2942", "primary_dark": "#0F1B30", "text": "#1A2942", "muted": "#5A6273", "accent": "#8B6F3F", "soft": "#EFE9DD"},
-    "fonts": {"serif": "Fraunces", "sans": "Source Sans 3", "mono": "Geist Mono"},
-    "voice": {"tone_words": ["thoughtful", "adult", "editorial"], "address": "du", "language": "sv", "sample_lines": ["Loggen är kvittot, inte piskan.", "Andas ut. En vecka i taget."], "avoid": ["spa-estetik", "pastellgradienter", "maskotar", "dark mode"]},
+    "colors": {"bg": "#FAF8F5", "card": "#FFFFFF", "primary": "#0F2647", "primary_dark": "#081B33", "text": "#0F2647", "muted": "#5B6676", "accent": "#715FC1", "soft": "#E9E4DE"},
+    "fonts": {"serif": "Newsreader", "sans": "Manrope", "mono": "Manrope"},
+    "voice": {"tone_words": ["grundad", "kompetent", "mänsklig"], "address": "du", "language": "sv", "sample_lines": ["Loggen är kvittot, inte piskan.", "Andas ut. En vecka i taget."], "avoid": ["flummig", "klinisk", "generisk", "streak-ångest", "dark mode"]},
     "logo_url": null,
     "certificate": {"issuer_text": "Mindfulnessguiden", "signature_name": "", "signature_title": "", "expires": null},
     "domain": {"subdomain": "mindfulnessguiden", "custom_domain": null}
   }'::jsonb);
+-- MG:s tokens = "Stilla kraft" (ersatte Editorial Lugn 2026-07-24, Lisas beslut).
+-- Källa: outputs/design-system/mindfulnessguiden/stilla-kraft/01-DESIGN-SYSTEM.md —
+-- bg=canvas, card=paper, primary=navy-900, primary_dark=navy-950, text=--color-text,
+-- muted=slate-600, accent=lilac-600, soft=stone-200 (linjer/avgränsare).
+-- WCAG AA-kontrollerad 2026-07-30 (alla kombinationer ≥4.5:1).
 
 -- ── Memberships ──
 insert into public.memberships (user_id, tenant_id, role) values
@@ -79,7 +85,8 @@ insert into public.memberships (user_id, tenant_id, role) values
   ('dddddddd-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', 'admin'),        -- tenant1-admin, EJ plattformsadmin
   ('aaaaaaaa-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 'participant'),
   ('bbbbbbbb-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 'participant'),
-  ('cccccccc-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', 'participant');
+  ('cccccccc-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', 'participant'),
+  ('eeeeeeee-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000002', 'admin');        -- granskningskonto (fas 7): admin ⇒ förhandsgranskar hela kursen
 
 -- ── Kurser ──
 insert into public.courses (id, tenant_id, work_name, display_name, certificate_title, unlock_mode, status) values
@@ -98,10 +105,12 @@ insert into public.course_certificate_requirements (tenant_id, course_id, positi
   ('10000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 3, 'attestation', '{"type": "live_session_honor"}'::jsonb);
 
 -- Loggtyper
-insert into public.log_type_defs (tenant_id, course_id, log_type, label, daily_unique) values
-  ('10000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 'practice_day', 'Övningsdag', true),
-  ('20000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', 'practice_day', 'Praxisdag', true),
-  ('20000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', 'guide_session', 'Guidesession', false);
+insert into public.log_type_defs (tenant_id, course_id, log_type, label, daily_unique, manual_window_days, config) values
+  ('10000000-0000-0000-0000-000000000001', '1c000000-0000-0000-0000-000000000001', 'practice_day', 'Övningsdag', true, 7, '{}'),
+  ('20000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', 'practice_day', 'Praxisdag', true, 7, '{}'),
+  -- Formatlistan = kursens egna ord (C-FINAL v9, tre sessionsformat) — konfig i DB, inte motorkod.
+  ('20000000-0000-0000-0000-000000000002', '2c000000-0000-0000-0000-000000000002', 'guide_session', 'Guidesession', false, null,
+   '{"formats": [{"key": "A", "label": "Mikropausen"}, {"key": "B", "label": "Mindfulness-stunden"}, {"key": "C", "label": "Introduktionsföreläsningen"}, {"key": "annat", "label": "Annat"}], "license_target": 10}');
 
 -- Kohorter
 insert into public.cohorts (id, tenant_id, course_id, name, start_date, price_per_participant_sek, status) values

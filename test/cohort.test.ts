@@ -32,7 +32,7 @@ const iso = (offset: number): string => {
 
 let courseId: string;
 let s1: string, s2: string;
-let k1: string, k2: string; // kohorter: start -10 resp. -3 dagar
+let k1: string, k2: string; // kohorter: start -10 resp. -5 dagar (bägge utan framtida drip-datum i fönstret)
 let p1: string, p2: string; // engångsdeltagare
 let admin: SupabaseClient, part1: SupabaseClient;
 let e1: string, e2: string; // enrollments
@@ -75,7 +75,7 @@ before(async () => {
   // Två kohorter med olika startdatum på SAMMA kurs.
   const cohorts = await svc.from("cohorts").insert([
     { tenant_id: T1, course_id: courseId, name: "Kull A", start_date: iso(-10), price_per_participant_sek: 4900, status: "active" },
-    { tenant_id: T1, course_id: courseId, name: "Kull B", start_date: iso(-3), price_per_participant_sek: 4900, status: "active" },
+    { tenant_id: T1, course_id: courseId, name: "Kull B", start_date: iso(-5), price_per_participant_sek: 4900, status: "active" },
   ]).select("id, start_date");
   assert.ok(!cohorts.error, `kohorter: ${cohorts.error?.message}`);
   const sorted = cohorts.data.sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
@@ -117,7 +117,7 @@ test("create_enrollment (admin): default-starts_at = kohortens start_date", asyn
   const rows = await svc.from("enrollments").select("id, starts_at, course_id").in("id", [e1, e2]);
   const byId = new Map(rows.data!.map((r) => [r.id, r]));
   assert.equal(byId.get(e1)!.starts_at, iso(-10));
-  assert.equal(byId.get(e2)!.starts_at, iso(-3));
+  assert.equal(byId.get(e2)!.starts_at, iso(-5));
   assert.equal(byId.get(e1)!.course_id, courseId, "course_id ska följa kohorten");
 });
 
@@ -140,9 +140,9 @@ test("två kohorter, olika startdatum ⇒ olika drip-upplåsning, samma innehål
   };
 
   const g1 = await gateFor(p1); // kohortstart -10: dag 7 passerad
-  const g2 = await gateFor(p2); // kohortstart -3: dag 7 ej nådd
+  const g2 = await gateFor(p2); // kohortstart -5: dag 7 ej nådd
   assert.equal(g1.find((s) => s.id === s2)!.unlocked, true, "Kull A (start -10) ska ha S2 öppen");
-  assert.equal(g2.find((s) => s.id === s2)!.unlocked, false, "Kull B (start -3) ska ha S2 låst");
+  assert.equal(g2.find((s) => s.id === s2)!.unlocked, false, "Kull B (start -5) ska ha S2 låst");
   assert.equal(g1.length, g2.length, "samma innehåll i båda kohorterna");
 });
 
@@ -195,7 +195,7 @@ test("flytt: ny rad + moved_from, gamla dropped; fönstren räknas om (loggdagar
   assert.equal(newRow.data!.status, "active");
   assert.equal(newRow.data!.cohort_id, k2);
   assert.equal(newRow.data!.moved_from_enrollment_id, e1, "spårbarheten (moved_from) saknas");
-  assert.equal(newRow.data!.starts_at, iso(-3), "nya starts_at = målkohortens start_date");
+  assert.equal(newRow.data!.starts_at, iso(-5), "nya starts_at = målkohortens start_date");
 
   // Omräkningen: samma loggdagar, nytt ankare ⇒ fönster 1 inte längre uppfyllt.
   const afterMove = computeLogWindows({ startsAt: newRow.data!.starts_at, ...cfg, loggedDates: await datesOf() });
@@ -203,7 +203,7 @@ test("flytt: ny rad + moved_from, gamla dropped; fönstren räknas om (loggdagar
 
   // Loggdagar EFTER flytten räknas i de nya fönstren (kravet förblir nåbart).
   for (let i = 0; i < 5; i++) {
-    const r = await part1.rpc("log_activity", { p_course_id: courseId, p_log_type: "practice_day", p_logged_date: iso(-3 + i) });
+    const r = await part1.rpc("log_activity", { p_course_id: courseId, p_log_type: "practice_day", p_logged_date: iso(-5 + i) });
     assert.ok(!r.error, `ny loggdag ${i}: ${r.error?.message}`);
   }
   const after2 = computeLogWindows({ startsAt: newRow.data!.starts_at, ...cfg, loggedDates: await datesOf() });

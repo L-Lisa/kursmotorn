@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
-import { getCourseForTenant, sectionsInOrder, type CourseView } from "@/lib/tenant/course";
+import { getCourseForTenant, getCourseLogTypes, sectionsInOrder, type CourseView } from "@/lib/tenant/course";
 import { isSectionComplete } from "@/lib/tenant/gating";
 import { buildUnderlag, type Underlag } from "@/lib/tenant/underlag";
 import type { Brand } from "@/lib/tenant/types";
@@ -170,6 +170,8 @@ export type ParticipantRow = {
   lastActiveAt: string | null;
   finalQuiz: "passed" | "attempted" | "none" | "no_quiz";
   derived: "klar" | "fast" | "aktiv";
+  /** Guidesessioner som räknas mot licensmålet (efter sista uppladdningssektionen); null = kursen saknar guideloggen. */
+  guideSessions: number | null;
 };
 
 export async function listParticipants(
@@ -183,6 +185,12 @@ export async function listParticipants(
     listCohorts(tenantId),
   ]);
   const cohortName = new Map(cohorts.map((c) => [c.id, c.name]));
+
+  const logTypes = course ? await getCourseLogTypes(course.id) : [];
+  const hasGuideLog = logTypes.some((t) => t.logType === "guide_session");
+  const finalUploadSectionId = course
+    ? (sectionsInOrder(course).filter((s) => s.requirements?.upload_required).at(-1)?.id ?? null)
+    : null;
 
   const [enrollRes, progressRes, uploadRes, attemptRes, logRes, certRes] = await Promise.all([
     supabase
@@ -199,7 +207,7 @@ export async function listParticipants(
       .from("quiz_attempts")
       .select("user_id, quiz_id, passed, created_at")
       .eq("tenant_id", tenantId),
-    supabase.from("activity_logs").select("user_id, created_at").eq("tenant_id", tenantId),
+    supabase.from("activity_logs").select("user_id, log_type, logged_date, created_at").eq("tenant_id", tenantId),
     supabase
       .from("certificates")
       .select("user_id, revoked_at")
@@ -219,6 +227,8 @@ export async function listParticipants(
     finalPassed: boolean;
     lastActive: string | null;
     hasCert: boolean;
+    guideDates: string[];
+    finalUploadAt: string | null;
   };
   const acc = new Map<string, Acc>();
   const get = (uid: string): Acc => {
@@ -232,6 +242,8 @@ export async function listParticipants(
         finalPassed: false,
         lastActive: null,
         hasCert: false,
+        guideDates: [],
+        finalUploadAt: null,
       };
       acc.set(uid, a);
     }
@@ -251,6 +263,10 @@ export async function listParticipants(
     const a = get(r.user_id as string);
     a.uploaded.add(r.section_id as string);
     bump(a, r.created_at);
+    if (finalUploadSectionId && r.section_id === finalUploadSectionId) {
+      const ts = String(r.created_at);
+      if (!a.finalUploadAt || ts < a.finalUploadAt) a.finalUploadAt = ts;
+    }
   }
   for (const r of attemptRes.data ?? []) {
     const a = get(r.user_id as string);
@@ -261,7 +277,11 @@ export async function listParticipants(
     }
     bump(a, r.created_at);
   }
-  for (const r of logRes.data ?? []) bump(get(r.user_id as string), r.created_at);
+  for (const r of logRes.data ?? []) {
+    const a = get(r.user_id as string);
+    bump(a, r.created_at);
+    if (r.log_type === "guide_session") a.guideDates.push(r.logged_date as string);
+  }
   for (const r of certRes.data ?? []) {
     if (!r.revoked_at) get(r.user_id as string).hasCert = true;
   }
@@ -307,6 +327,11 @@ export async function listParticipants(
               ? "attempted"
               : "none",
       derived: klar ? "klar" : quiet ? "fast" : "aktiv",
+      guideSessions: hasGuideLog
+        ? a?.finalUploadAt
+          ? a.guideDates.filter((d) => d > a.finalUploadAt!.slice(0, 10)).length
+          : 0
+        : null,
     });
   }
 

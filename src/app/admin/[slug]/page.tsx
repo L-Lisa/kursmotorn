@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireTenantAdmin, listParticipants, listCohorts } from "@/lib/admin/data";
+import { DeleteParticipantDialog } from "./delete-participant-dialog";
 
 /**
  * Admin-dashboard: deltagarlistan med kohortfilter (ACCEPTANCE §Fas 6).
@@ -20,6 +21,7 @@ export default async function ParticipantsPage({
     listCohorts(tenantId),
     listParticipants(tenantId, kohort || undefined),
   ]);
+  const hasGuideCol = rows.some((r) => r.guideSessions !== null);
 
   const derivedBadge: Record<string, string> = {
     klar: "bg-primary/10 text-primary",
@@ -63,9 +65,9 @@ export default async function ParticipantsPage({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-border">
-              {["Namn", "Kohort", "Progress", "Senast aktiv", "Slutprov", "Status"].map((h) => (
+              {["Namn", "Kohort", "Progress", "Senast aktiv", "Slutprov", ...(hasGuideCol ? ["Guidesessioner"] : []), "Status", ""].map((h, i) => (
                 <th
-                  key={h}
+                  key={i}
                   className="px-5 py-3 text-xs font-normal uppercase tracking-[0.06em] text-muted-foreground"
                 >
                   {h}
@@ -108,6 +110,11 @@ export default async function ParticipantsPage({
                         ? "Ej påbörjat"
                         : "—"}
                 </td>
+                {hasGuideCol && (
+                  <td className="px-5 py-3.5 font-[family-name:var(--font-mono)] text-xs text-muted-foreground">
+                    {r.guideSessions ?? "—"}
+                  </td>
+                )}
                 <td className="px-5 py-3.5">
                   <span
                     className={`rounded-full px-2.5 py-1 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.06em] ${derivedBadge[r.derived]}`}
@@ -115,11 +122,14 @@ export default async function ParticipantsPage({
                     {r.derived}
                   </span>
                 </td>
+                <td className="px-5 py-3.5 text-right">
+                  <DeleteParticipantDialog slug={slug} userId={r.userId} participantName={r.fullName} />
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={hasGuideCol ? 8 : 7} className="px-5 py-8 text-center text-sm text-muted-foreground">
                   Inga deltagare {kohort ? "i den kohorten" : "ännu"}.
                 </td>
               </tr>

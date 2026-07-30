@@ -11,6 +11,14 @@ export type SectionRequirements = {
   checkoff?: boolean;
   quiz_id?: string | null;
   upload_required?: boolean;
+  /**
+   * Valfri sektion (fas 7, Lisas beslut 2026-07-30): blockerar INTE nästa sektion
+   * i self_paced-läget även om den är oavslutad. Sektionen räknas fortfarande som
+   * oavslutad (progress, sections_complete-certvillkoret) — bara sekvenseringen
+   * släpper förbi. MG:s inspelningssektioner: läsningen går i egen takt,
+   * certvillkoret (upload_sections) fångar uppladdningarna.
+   */
+  optional?: boolean;
 };
 
 export type GatingSection = {
@@ -79,7 +87,8 @@ export function computeGating(input: GatingInput): SectionState[] {
     if (s.requirements?.quiz_id && !progress.passedQuizIds.has(s.requirements.quiz_id)) {
       quizGateBroken = true;
     }
-    prevComplete = complete;
+    // Valfri sektion släpper sekvensen vidare även oavslutad (provregeln ovan gäller ändå).
+    prevComplete = complete || !!s.requirements?.optional;
   }
 
   return out;

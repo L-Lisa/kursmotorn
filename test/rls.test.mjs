@@ -133,7 +133,7 @@ test("practice_day dagsunik; guide_session inte (via log_activity — direktinse
   const T1 = "10000000-0000-0000-0000-000000000001";
   const course = (await a.from("courses").select("id").limit(1).single()).data;
   const admin = await signIn("admin1@andning.test");
-  const day = "2026-06-05";
+  const day = new Date().toISOString().slice(0, 10); // idag — 7-dagarsregeln (fas 7) gäller manuell loggning
   await admin.from("activity_logs").delete().eq("user_id", A).eq("logged_date", day);
 
   // Fas 6: log_activity är deltagarens ENDA skrivväg (typregistret kan inte kringgås).

@@ -109,3 +109,26 @@
     color: var(--m-muted);
   }
 }
+
+/* Läsvyns markdown-typografi (fas 7) — tenant-tokens, aldrig hårdkodade färger. */
+.prose-t {
+  color: var(--t-text);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+}
+.prose-t p, .prose-t ul, .prose-t ol, .prose-t blockquote, .prose-t table, .prose-t pre { margin-bottom: 1.1em; }
+.prose-t h3, .prose-t h4 { font-family: var(--t-serif); color: var(--t-text); margin: 1.6em 0 0.6em; }
+.prose-t h3 { font-size: 1.35rem; }
+.prose-t h4 { font-size: 1.15rem; }
+.prose-t ul { list-style: disc; padding-left: 1.4em; }
+.prose-t ol { list-style: decimal; padding-left: 1.4em; }
+.prose-t li { margin-bottom: 0.35em; }
+.prose-t strong { font-weight: 600; }
+.prose-t em { font-style: italic; }
+.prose-t blockquote { border-left: 3px solid var(--t-soft); padding-left: 1em; color: var(--t-muted); font-style: italic; }
+.prose-t hr { border: 0; border-top: 1px solid var(--t-soft); margin: 2em 0; }
+.prose-t table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.prose-t th, .prose-t td { border: 1px solid var(--t-soft); padding: 0.5em 0.7em; text-align: left; vertical-align: top; }
+.prose-t th { background: var(--t-soft); font-weight: 600; }
+.prose-t code { font-family: var(--t-mono); font-size: 0.9em; }
+.prose-t a { color: var(--t-primary); text-decoration: underline; }
