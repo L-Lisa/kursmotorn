@@ -1,7 +1,7 @@
 // GRIND 3 — gating-logikens kärnfall. Kör: npm run test:gating
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeGating, isSectionComplete } from "../src/lib/tenant/gating";
+import { computeGating, isSectionComplete, type SectionRequirements } from "../src/lib/tenant/gating";
 
 const empty = () => ({
   completedSectionIds: new Set<string>(),
@@ -9,7 +9,7 @@ const empty = () => ({
   uploadedSectionIds: new Set<string>(),
 });
 
-const secs = (defs: { id: string; req?: any; drip?: number }[]) =>
+const secs = (defs: { id: string; req?: SectionRequirements; drip?: number }[]) =>
   defs.map((d) => ({ id: d.id, requirements: d.req ?? { checkoff: true }, dripOffsetDays: d.drip ?? null }));
 
 test("self_paced: sektion 1 öppen, 2 låst tills 1 klar", () => {

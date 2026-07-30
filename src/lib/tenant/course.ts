@@ -153,7 +153,9 @@ export async function getGatingState(
     supabase.from("quiz_attempts").select("quiz_id, passed").eq("user_id", userId).eq("passed", true),
     supabase
       .from("enrollments")
-      .select("starts_at")
+      // Uttrycklig FK: enrollments har två relationer till cohorts (composite-FK:n
+      // från integritetshärdningen) — utan hint är embedden tvetydig för PostgREST.
+      .select("starts_at, cohorts!enrollments_cohort_id_fkey(start_date)")
       .eq("user_id", userId)
       .eq("course_id", course.id)
       .eq("status", "active")
@@ -166,9 +168,19 @@ export async function getGatingState(
     passedQuizIds: new Set((attemptRes.data ?? []).map((r) => r.quiz_id as string)),
   };
 
-  const cohortStart = enrollRes.data?.starts_at
-    ? new Date(`${enrollRes.data.starts_at}T00:00:00Z`)
-    : null;
+  // Drip ankras i KOHORTENS start_date (datamodellens omankring 2026-07-11) —
+  // enrollment.starts_at är certfönstrens ankare, inte dripens. En eftersläntrare
+  // följer alltså kohortens schema men får egna certfönster.
+  const cohortRel = enrollRes.data?.cohorts as
+    | { start_date: string }
+    | { start_date: string }[]
+    | null
+    | undefined;
+  const cohortStartDate = Array.isArray(cohortRel)
+    ? cohortRel[0]?.start_date
+    : cohortRel?.start_date;
+  const anchor = cohortStartDate ?? enrollRes.data?.starts_at;
+  const cohortStart = anchor ? new Date(`${anchor}T00:00:00Z`) : null;
 
   const states = computeGating({
     unlockMode: course.unlockMode === "scheduled" ? "scheduled" : "self_paced",

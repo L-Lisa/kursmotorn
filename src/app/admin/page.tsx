@@ -101,12 +101,20 @@ export default async function AdminDashboard() {
                     </span>
                   </td>
                   <td className="px-5 py-4 text-right">
-                    <Link
-                      href={`/${t.slug}`}
-                      className="font-[family-name:var(--font-mono)] text-xs text-primary hover:underline"
-                    >
-                      Öppna →
-                    </Link>
+                    <span className="inline-flex gap-4">
+                      <Link
+                        href={`/admin/${t.slug}`}
+                        className="font-[family-name:var(--font-mono)] text-xs text-primary hover:underline"
+                      >
+                        Administrera →
+                      </Link>
+                      <Link
+                        href={`/${t.slug}`}
+                        className="font-[family-name:var(--font-mono)] text-xs text-primary hover:underline"
+                      >
+                        Öppna →
+                      </Link>
+                    </span>
                   </td>
                 </tr>
               ))}

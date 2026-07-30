@@ -128,7 +128,7 @@ test("Storage path-prefix: egen mapp OK, annans nekad", async () => {
   await a.storage.from("recordings").remove([own]);
 });
 
-test("practice_day dagsunik; guide_session inte", async () => {
+test("practice_day dagsunik; guide_session inte (via log_activity — direktinsert nekas)", async () => {
   const a = await signIn("anna@andning.test");
   const T1 = "10000000-0000-0000-0000-000000000001";
   const course = (await a.from("courses").select("id").limit(1).single()).data;
@@ -136,10 +136,39 @@ test("practice_day dagsunik; guide_session inte", async () => {
   const day = "2026-06-05";
   await admin.from("activity_logs").delete().eq("user_id", A).eq("logged_date", day);
 
-  const pd = { tenant_id: T1, user_id: A, course_id: course.id, log_type: "practice_day", logged_date: day, source: "manual" };
-  const first = await a.from("activity_logs").insert(pd);
+  // Fas 6: log_activity är deltagarens ENDA skrivväg (typregistret kan inte kringgås).
+  const direct = await a.from("activity_logs").insert({
+    tenant_id: T1, user_id: A, course_id: course.id, log_type: "practice_day", logged_date: day, source: "manual",
+  });
+  assert.ok(direct.error, "deltagare kunde direkt-inserta i activity_logs (policyn skulle vara borttagen)");
+
+  const call = (log_type) => a.rpc("log_activity", {
+    p_course_id: course.id, p_log_type: log_type, p_logged_date: day,
+  });
+  const first = await call("practice_day");
   assert.ok(!first.error, `första practice_day: ${first.error?.message}`);
-  const second = await a.from("activity_logs").insert(pd);
+  const second = await call("practice_day");
   assert.ok(second.error, "andra practice_day samma dag borde avvisas");
+  const unknown = await call("finns_inte");
+  assert.ok(unknown.error, "okänd loggtyp borde avvisas (typregistret)");
   await admin.from("activity_logs").delete().eq("user_id", A).eq("logged_date", day);
+});
+
+test("Enrollment-funktionerna är admin-grindade; dubblettaktiv avvisas i DB", async () => {
+  const a = await signIn("anna@andning.test");
+  const admin = await signIn("admin1@andning.test");
+  const cohort = (await admin.from("cohorts").select("id, course_id, tenant_id").limit(1).single()).data;
+
+  // Deltagare kan varken skapa eller flytta enrollments.
+  const asPart = await a.rpc("create_enrollment", { p_cohort_id: cohort.id, p_user_id: A });
+  assert.ok(asPart.error, "deltagare kunde skapa enrollment");
+  const own = (await a.from("enrollments").select("id").eq("user_id", A).eq("status", "active").limit(1).single()).data;
+  const mv = await a.rpc("move_enrollment", { p_enrollment_id: own.id, p_to_cohort_id: cohort.id });
+  assert.ok(mv.error, "deltagare kunde flytta sin enrollment");
+
+  // Admin-dubblett (Anna har redan aktiv plats på kursen) avvisas av det partiella indexet.
+  const dup = await admin.from("enrollments").insert({
+    tenant_id: cohort.tenant_id, user_id: A, cohort_id: cohort.id, course_id: cohort.course_id, starts_at: "2026-06-01",
+  });
+  assert.ok(dup.error, "andra aktiva enrollment på samma kurs borde avvisas");
 });

@@ -12,6 +12,9 @@
     "import": "node --env-file=.env.development.local scripts/import-course.mjs",
     "import:remote": "node --env-file=.env.local scripts/import-course.mjs",
     "test:gating": "node --import tsx --test test/gating.test.ts",
+    "test:windows": "node --import tsx --test test/log-windows.test.ts",
+    "test:cohort": "node --env-file=.env.local --import tsx --test test/cohort.test.ts",
+    "test:cohort:local": "node --env-file=.env.development.local --import tsx --test test/cohort.test.ts",
     "test:certification": "node --env-file=.env.local --test test/certification.test.mjs",
     "test:certification:local": "node --env-file=.env.development.local --test test/certification.test.mjs"
   },
