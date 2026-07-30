@@ -317,5 +317,7 @@ test("GDPR-raderingen: kaskad + Storage + revokerat/anonymiserat certifikat", as
   assert.equal(v.status, "revoked", "certifikatet ska visas som återkallat");
   assert.equal(v.holder_name, "Raderad deltagare", "certifikatet ska vara anonymiserat");
 
+  // Städning: det revokerade certifikatet består by design — testet tar bort sitt eget.
+  await svc.from("certificates").delete().eq("verify_slug", cert.data.verify_slug);
   userId = ""; // after-hooken behöver inte radera igen
 });

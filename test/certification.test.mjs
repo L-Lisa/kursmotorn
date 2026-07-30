@@ -61,7 +61,12 @@ before(async () => {
 });
 
 after(async () => {
-  if (userId) await svc.auth.admin.deleteUser(userId); // kaskad rensar alla rader
+  if (userId) {
+    // Certifikat överlever numera användarradering som revokerad handling (fas 7,
+    // migration ..12) — testet städar sitt eget så demo-DB:n inte ackumulerar rader.
+    await svc.from("certificates").delete().eq("user_id", userId);
+    await svc.auth.admin.deleteUser(userId);
+  }
 });
 
 // ── Villkorssättare (service role, kringgår RLS för test-setup) ──
