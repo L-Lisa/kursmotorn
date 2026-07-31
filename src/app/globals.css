@@ -126,6 +126,34 @@
 .prose-t strong { font-weight: 600; }
 .prose-t em { font-style: italic; }
 .prose-t blockquote { border-left: 3px solid var(--t-soft); padding-left: 1em; color: var(--t-muted); font-style: italic; }
+/* Forskningsrutan (MG 2026-07-31): blockquote med Forskning:-etikett får kortform +
+   tenantens app-ikon. Enbart presentation — texten är innehållets, tokens är tenantens. */
+.prose-t blockquote.forskningsruta {
+  position: relative;
+  border: 1px solid var(--t-soft);
+  border-left: 3px solid var(--t-accent);
+  border-radius: 0.5rem;
+  background: var(--t-card);
+  padding: 1.1em 3.4em 1.1em 1.3em;
+  font-style: normal;
+  color: var(--t-text);
+}
+.prose-t blockquote.forskningsruta .forskningsruta-ikon {
+  position: absolute;
+  top: 1em;
+  right: 1.1em;
+  width: 28px;
+  height: 28px;
+}
+.prose-t blockquote.forskningsruta p { margin-bottom: 0.7em; }
+.prose-t blockquote.forskningsruta p:last-child { margin-bottom: 0; }
+.prose-t blockquote.forskningsruta > p:first-child > strong:first-child {
+  display: block;
+  font-family: var(--t-sans);
+  font-size: 0.9rem;
+  color: var(--t-primary-dark);
+  margin-bottom: 0.35em;
+}
 .prose-t hr { border: 0; border-top: 1px solid var(--t-soft); margin: 2em 0; }
 .prose-t table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .prose-t th, .prose-t td { border: 1px solid var(--t-soft); padding: 0.5em 0.7em; text-align: left; vertical-align: top; }

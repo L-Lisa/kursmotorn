@@ -9,6 +9,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "../../checkoff-button";
 import { UploadControl } from "../../upload-control";
 import { MeditationPlayer } from "./meditation-player";
+import { makeBlockquote } from "./research-note";
 
 /**
  * Läsvyn (fas 7): en moduls/veckas innehåll i löpande text, tenant-brandad.
@@ -48,6 +49,8 @@ export default async function WeekReader({
       .createSignedUrl(s.mediaPath, 3600);
     if (signed?.signedUrl) mediaUrls.set(s.id, signed.signedUrl);
   }
+
+  const mdComponents = { blockquote: makeBlockquote(brand.markSvg) };
 
   const prev = moduleIndex > 0 ? course.modules[moduleIndex - 1] : null;
   const next = moduleIndex + 1 < course.modules.length ? course.modules[moduleIndex + 1] : null;
@@ -97,7 +100,9 @@ export default async function WeekReader({
                 </h2>
                 {s.content && (
                   <div className="prose-t">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{s.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                      {s.content}
+                    </ReactMarkdown>
                   </div>
                 )}
                 {s.mediaPath && mediaUrls.has(s.id) && (

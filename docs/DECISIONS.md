@@ -299,3 +299,16 @@ Migration `..05` (integritetshärdningen) skapade en andra relation mellan enrol
 
 ### Kvitto
 - Sviterna körda MOT FJÄRREN efter migrationen: RLS **12/12** · breathworks-regressionen **7/7** · cohort 7/7 · mg 11/11 · gating · windows · lint · build gröna. Skarp webbläsarverifiering mot kursmotorn.vercel.app före/efter (granskningskontot + deltagarstickprov). Obs: lokal Docker-stack kördes inte detta pass (Lisas Docker var låst) — `db reset`-reproducerbarheten täcks av att `..15` ligger som vanlig migrationsfil.
+
+## 2026-07-31 — Vecka 1-reimport (Lisas granskningspass) + forskningsrutans Stilla kraft-markör
+
+### Re-importen
+- C-FINAL-vecka-1.md (Lisas granskningspass + sanering, se andringslogg-2026-07-31-vecka1.md i kursinnehall-mappen) reimporterad till fjärren med `npm run import:mg:remote`. Verbatim-testet (test:mg, DB diffas tecken för tecken mot källfilen) **11/11 grönt mot fjärren** — DB är exakt = filen, inklusive nya rubriken "Vecka 1: Grunden. Förstå mindfulness" och "Forskning:"-etiketterna.
+- **Tankstrecken i meditationsmanusen är Lisas medvetna undantag** (pausmarkör i talat skript) — importen är verbatim så inget "städas"; regeln noteras här så ingen framtida session sanerar dem.
+
+### Forskningsrutans markör (Lisas beslut: textetikett + app-ikon)
+- **Detektion:** blockquotes vars första rad börjar "**Forskning:**" renderas som `forskningsruta` (research-note.tsx läser markdown-AST:ens text). Innehållet röres ALDRIG — etiketten "Forskning:" står redan i källtexten; markören är enbart presentation. Övriga blockquotes (t.ex. definitionscitatet) renderas som förut.
+- **Ikonen är tenant-buren, inte hårdkodad** (whitelabel-regeln): nytt valfritt brand_spec-fält `mark_svg` (inline-SVG). Parsas i brand.ts (kräver `<svg`-prefix), renderas ENBART som `<img src="data:image/svg+xml...">` — SVG i img-element kan inte köra skript, så fältet är ingen XSS-yta trots admin-skrivbar DB. MG:s värde = `mindfulnessguiden-mark.svg` ur Stilla kraft-assets (satt i fjärren + seed.sql). Tenant utan mark_svg får rutan utan ikon.
+- **Rutans form** byggs helt av tenant-tokens: kort med `--t-soft`-ram, `--t-accent`-vänsterkant, `--t-card`-bakgrund; etikettraden i `--t-sans`/`--t-primary-dark`; ikonen 28 px uppe till höger.
+- **Brand-wizardens sparväg gjordes bevarande:** buildBrandSpec bygger om hela spec:en ⇒ ett wizard-spar hade raderat mark_svg. saveBrandSpec merge:ar nu befintlig spec under wizardens fält — okända nycklar överlever. (Utan detta hade markören försvunnit första gången Lisa rör brand-formuläret.)
+- **[Cowork-synk]** brand-spec-mallen (`system/templates/brand-spec.md`) ligger utanför repot och ska få mark_svg-fältet dokumenterat av Cowork (mallen ÄR schemat) — flaggat till Lisa.

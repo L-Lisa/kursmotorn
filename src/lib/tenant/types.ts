@@ -37,6 +37,8 @@ export type Brand = {
   fonts: BrandFonts;
   voice: BrandVoice;
   logoUrl: string | null;
+  /** Tenantens app-ikon som inline-SVG (valfri) — renderas alltid som <img data:>-URI, aldrig som rå DOM. */
+  markSvg: string | null;
 };
 
 export type TenantContext = {

@@ -203,10 +203,19 @@ export async function saveBrandSpec(slug: string, form: FormData): Promise<Resul
   });
   if (!built.ok) return { ok: false, error: built.error };
 
+  // Bevara fält utanför wizardens schema (t.ex. mark_svg — sätts utanför formuläret):
+  // wizardens fält vinner, okända nycklar överlever. Annars raderar varje spar dem.
+  const { data: existing } = await supabase
+    .from("tenant_brands")
+    .select("brand_spec")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  const merged = { ...((existing?.brand_spec as object) ?? {}), ...built.spec };
+
   const { error } = await supabase
     .from("tenant_brands")
     .upsert(
-      { tenant_id: tenantId, brand_spec: built.spec, updated_at: new Date().toISOString() },
+      { tenant_id: tenantId, brand_spec: merged, updated_at: new Date().toISOString() },
       { onConflict: "tenant_id" },
     );
   if (error) return fail(error);

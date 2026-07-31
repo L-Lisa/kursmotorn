@@ -69,6 +69,10 @@ export function parseBrand(spec: unknown): Brand {
       avoid: strArray(voice.avoid),
     },
     logoUrl: typeof s.logo_url === "string" ? s.logo_url : null,
+    markSvg:
+      typeof s.mark_svg === "string" && s.mark_svg.trim().startsWith("<svg")
+        ? s.mark_svg.trim()
+        : null,
   };
 }
 
