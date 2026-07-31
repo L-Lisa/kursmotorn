@@ -60,13 +60,15 @@ cd eject-output/<slug>/standalone && npm start   # kursvisaren på :4173
 node scripts/grind8-check.mjs        # verifierar paketet
 ```
 
-## Fjärr-DB + deploy — LÄGET JUST NU (viktigt)
+## Fjärr-DB + deploy — LÄGET JUST NU (uppdaterat 2026-07-31)
 
-- **Fjärrprojektet ligger på FAS 2-LÄGET.** Migrationer `..07`–`..12`, båda kursimporterna
-  och nya seeden (Stilla kraft, granskningskontot) är INTE pushade. Synk sker på
-  **Lisas uttryckliga OK, per gång** (repo-CLAUDE #2/#3): migrationer FÖRE kod,
-  därefter `npm run import:remote` + `npm run import:mg:remote`.
-- **Ingen Vercel-deploy är gjord.** Produktionsdeploy = Lisas knapp, per gång.
+- **Fjärrprojektet är I FAS med repot:** alla migrationer t.o.m. `..15`
+  (granskningslägets läsläge) applicerade, båda kursimporterna + seeden synkade.
+  Nya ändringar sker fortsatt på **Lisas OK, per gång**: migrationer FÖRE kod.
+- **Vercel är git-kopplad:** push till `main` (github.com/L-Lisa/kursmotorn) ⇒
+  produktionsdeploy av kursmotorn.vercel.app automatiskt. Sedan 2026-07-31 kör
+  produktionen HELA bygget (fas 0–9 + FFMQ-15 + Stilla kraft); dessförinnan låg
+  fas 5-koden där. Stående push-OK förutsätter körd testloop (Lisas regel).
 - Kostnadsläge: Supabase-projektet (Pro, eu-north-1) är den enda betaltjänsten.
   Lokal utveckling är gratis (Docker).
 
