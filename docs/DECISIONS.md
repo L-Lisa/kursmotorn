@@ -236,6 +236,22 @@ Migration `..05` (integritetshärdningen) skapade en andra relation mellan enrol
 - **test:mg utökad 9→11:** FFMQ-tidslåset (pre nekas efter fönster 2 · post tillåts från fönster 6 · direktinsert nekas) + scoring mot tre kända fall (alla 3:or ⇒ 117 {24,24,24,24,21} · alla 5:or ⇒ 119 {40,28,8,8,35} · alla 1:or ⇒ 115 {8,20,40,40,7}) + upsert. **Alla sviter gröna: RLS 11/11 · gating 6/6 · windows 7/7 · cohort 7/7 · breathworks-regressionen 7/7 · MG 11/11** · build/lint gröna · namnbytes-grep 0.
 - **Skarpt i webbläsaren** (`scripts/grind7b-ffmq-media.mjs`, PNG 10–12 i grind7-mappen): FFMQ-formuläret öppet (Cecilias starts_at tillfälligt flyttad och EXAKT återställd, FFMQ-raden städad) → 39/39 ifyllda → sparat med låsdatum synligt · meditationsspelaren renderad i sektionen med **signerad** media-URL (privat bucket).
 
+## 2026-07-31 — FFMQ-beslutet KORRIGERAT (Lisa) + fjärrsynk genomförd (Lisas push-OK)
+
+### FFMQ-korrigeringen (ersätter beslutet tidigare samma dag)
+- **Bygg svensk FFMQ-15, INTE FFMQ-39/engelska PDF:en.** Källa: sajtens befintliga svenska FFMQ-15 (FFMQ-sviten i Mindfulnessguiden.se-repot) — items + scoring kopieras ORDAGRANT inkl. poängvändningen; hittas inte källan frågas Lisa om sökvägen (egna items skrivs aldrig).
+- **Attributionsrad under testet:** "FFMQ-15 efter Baer m.fl. (2006) och Gu m.fl. (2016). Svensk version finns validerad (Lilja m.fl.)." med länkar till ruthbaer.com och Lunds universitets publikationssida.
+- **Rättslig grund: FFMQ-15:s ÖPPNA PUBLICERING + attribution** (Gu m.fl. 2016, CC BY-publicering [Trolig]; underlag: `projects/mindfulnessguiden/research/ffmq-rattigheter-2026-07-29.md`) — INTE "icke-kommersiell användning". Formuleringen i gårdagens beslut utgår.
+- **ACCEPTANCE §Fas 7-kriteriet återinsatt:** identisk scoring som sajtens självtest för 3 kända testfall.
+- **Status:** 39-versionen (migration `..13`) är driftsatt lokalt + fjärr och ersätts av 15-versionen (migration `..14` + uppdaterad items-lib/UI/tester) **så fort källfilen är utpekad** — sajtrepots kod ligger utanför COWORK-mappen, väntar på Lisas sökväg. [L]
+
+### Fjärrsynk-kvitto (fjärren: fas 2-läget → FULLT SYNKAD)
+- **Migrationer 07–13 applicerade** via MCP i ordning (quiz_engine, recordings_limit, certification, cohort_admin, mg_fas_a, cert_mg_requirements, ffmq_and_media) — fjärrens migrationslista är nu komplett 01–13.
+- **Dataläget ikapp:** MG-branden → Stilla kraft (verifierat #0F2647) · guide_session-config (formaten + licensmål 10) · granskningskontot `granskning@mind.test` (MG-admin) skapat · båda kursimporterna körda (70 + 183 sektioner, ordagrant) · placeholder-ljudet uppladdat till fjärr-Storage + kopplat till 14 meditationssektioner.
+- **Nyckelhantering:** `SUPABASE_SECRET_KEY` var tom i `.env.local` — Lisa lade in sin (nya formatet). Legacy-anon-JWT:n avvisades därefter av API-gatewayen ("Invalid API key" trots aktiv i nyckellistan — projektet migrerat till nya nyckelsystemet) → `NEXT_PUBLIC_SUPABASE_ANON_KEY` bytt till projektets **publishable key** (publik, hämtad via MCP). Dublettrader i env-filen städade. **Lärdom:** vid nyckelmigrering i Supabase slutar legacy-JWT:er gälla i praktiken — byt klientnyckeln samtidigt.
+- **Fjärrverifiering — ALLA sviter gröna MOT FJÄRR-DB:N:** RLS **11/11** · kohort **7/7** · **breathworks-regressionen 7/7** · MG **11/11** (inkl. FFMQ-tidslås/scoring, importens ordagrannhet DB→källfil, GDPR-raderingen med fjärr-Storage). Hemlighetsgrind fortsatt **0** (nycklarna bor enbart i git-ignorerade env-filer).
+- **Kvarstår för visning:** preview-deploy (Vercel) är INTE gjord — deploy är Lisas knapp, per gång, precis som tidigare.
+
 ## 2026-07-30 — Fas 8: eject-exporten
 
 ### Paketets form (tolkningsbeslut, loggade)
