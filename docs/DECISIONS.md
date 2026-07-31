@@ -220,6 +220,22 @@ Migration `..05` (integritetshärdningen) skapade en andra relation mellan enrol
 2. **Auto-loggningen (spelaren):** väntar på MG:s meditationsljudfiler. Mätkontraktet är bestämt: spelaren rapporterar spelad andel av `sections.media_duration_sec`; ≥90 % ⇒ `log_activity(source: auto)` (idempotent, redan testad). Tröskeln 90 % = konfigval [Trolig], sätts skarpt när spelaren byggs.
 3. Fjärr-DB-synk: fjärren ligger kvar på fas 2-läget (migrationer 07–12 + båda importerna + nya seeden väntar) — **Lisas uttryckliga push-OK krävs** (gäller oförändrat).
 
+## 2026-07-31 — Fas 7-komplettering: FFMQ + meditationsspelaren (migration `..13`)
+
+### FFMQ — Lisas beslut 2026-07-31 (ersätter spec:ens FFMQ-15-plan)
+- **Instrumentet är Baers original-FFMQ (39 items, fem facetter)**, återgivet ORDAGRANT ur `FFMQ-eng.pdf` (Lisas fil), på engelska, med attribution: länk till Ruth Baers sida (ruthbaer.com) + not om att en svensk översättning finns (länk till Lunds universitets publikationssida). **Lisas licensbedömning: testet säljs inte** — det återges med källhänvisning i kursen. Detta ersätter spec:ens "FFMQ-15 kopieras från sajtens självtest"; ACCEPTANCE-kriteriet "identiskt resultat som sajtens självtest" utgår därmed och ersätts av scoringtester mot Baers publicerade scoringinstruktion (vändlogik + facettsummor). Kolumnkommentaren "15 items" i schema-filen är historisk — answers är jsonb och bär 39.
+- **Scoring + tidslås bor i EN DB-funktion (`submit_ffmq`, SECURITY DEFINER):** R-items vänds (6−x), facettsummor per instruktionen, total. Tidslåset (godkända specen §7): pre kan lämnas/ändras t.o.m. dagen före fönster 2 (starts_at+7), post öppnar i fönster 6 (starts_at+35). Direktskrivning för deltagare BORTTAGEN (ff_insert_own/ff_update_own) — låset kan inte kringgås; admin-override (ff_admin) består. Upsert per (user, kohort, occasion).
+- **UI `/kurs/ffmq`:** engelska originallydelser (items + skala + instruktion), svensk ram, resultatvy med facettstaplar ("ögonblicksbild, inte betyg"). Visas för kurser med log_threshold-certvillkor (mätfönstren = mätperioderna). Missat pre-fönster visas lugnt — "kursen står inte och faller med den".
+
+### Meditationsspelaren + kursmedia
+- **Bucket `course-media`** (privat; medlemmar läser sin tenants media via path-prefix-RLS, admin skriver) — fynd 6:s sista bucket. Spelaren får **signerade URL:er (1 h TTL)** server-side.
+- **`scripts/attach-media.mjs <slug> <fil> [titelregex]`**: laddar upp EN gång till `<tenant>/media/`, sätter media_path + media_duration_sec (via macOS `afinfo` — byggmiljön är Lisas Mac) på matchande sektioner. **Placeholder-läget (Lisas fil "A Bodyscan-placehold.m4a", ~39 min):** samma fil på alla meditationssektioner (`Minimeditation:`/`Veckans meditation:`, 14 sektioner) — byts per sektion när riktiga inspelningarna finns, samma skript.
+- **Mätmetoden (≥90 %):** spelaren ackumulerar faktiskt LYSSNAD tid (timeupdate-delta; spolning räknas inte) mot `media_duration_sec` ur DB; vid tröskeln anropas `recordPlayback` → `log_activity(source: auto)` (idempotent — två genomförda meditationer samma dag ⇒ EN rad). **v1-avvägning [loggad]:** andelen mäts i klienten; servern validerar sektion+medlemskap+media. Skärpning (server-side telemetri) är en senare höjning. Tröskeln 0.9 = kodkonstant (konfigval [Trolig] per §3.1).
+
+### Kvitto (kompletteringen)
+- **test:mg utökad 9→11:** FFMQ-tidslåset (pre nekas efter fönster 2 · post tillåts från fönster 6 · direktinsert nekas) + scoring mot tre kända fall (alla 3:or ⇒ 117 {24,24,24,24,21} · alla 5:or ⇒ 119 {40,28,8,8,35} · alla 1:or ⇒ 115 {8,20,40,40,7}) + upsert. **Alla sviter gröna: RLS 11/11 · gating 6/6 · windows 7/7 · cohort 7/7 · breathworks-regressionen 7/7 · MG 11/11** · build/lint gröna · namnbytes-grep 0.
+- **Skarpt i webbläsaren** (`scripts/grind7b-ffmq-media.mjs`, PNG 10–12 i grind7-mappen): FFMQ-formuläret öppet (Cecilias starts_at tillfälligt flyttad och EXAKT återställd, FFMQ-raden städad) → 39/39 ifyllda → sparat med låsdatum synligt · meditationsspelaren renderad i sektionen med **signerad** media-URL (privat bucket).
+
 ## 2026-07-30 — Fas 8: eject-exporten
 
 ### Paketets form (tolkningsbeslut, loggade)

@@ -3,11 +3,12 @@ import { notFound, redirect } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
-import { getCourseForTenant, getGatingState } from "@/lib/tenant/course";
+import { getCourseForTenant, getGatingState, getCourseLogTypes } from "@/lib/tenant/course";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "../../checkoff-button";
 import { UploadControl } from "../../upload-control";
+import { MeditationPlayer } from "./meditation-player";
 
 /**
  * Läsvyn (fas 7): en moduls/veckas innehåll i löpande text, tenant-brandad.
@@ -35,6 +36,18 @@ export default async function WeekReader({
   const supabase = await createClient();
   const { data: isAdmin } = await supabase.rpc("is_tenant_admin", { tid: tenantId });
   const gating = isAdmin ? null : await getGatingState(course, user.id);
+  const logTypes = await getCourseLogTypes(course.id);
+  const autoLogs = logTypes.some((t) => t.logType === "practice_day");
+
+  // Signerade URL:er (1 h TTL) för modulens media — RLS (medlemsläsning) gatar.
+  const mediaUrls = new Map<string, string>();
+  for (const s of mod.sections) {
+    if (!s.mediaPath) continue;
+    const { data: signed } = await supabase.storage
+      .from("course-media")
+      .createSignedUrl(s.mediaPath, 3600);
+    if (signed?.signedUrl) mediaUrls.set(s.id, signed.signedUrl);
+  }
 
   const prev = moduleIndex > 0 ? course.modules[moduleIndex - 1] : null;
   const next = moduleIndex + 1 < course.modules.length ? course.modules[moduleIndex + 1] : null;
@@ -86,6 +99,15 @@ export default async function WeekReader({
                   <div className="prose-t">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{s.content}</ReactMarkdown>
                   </div>
+                )}
+                {s.mediaPath && mediaUrls.has(s.id) && (
+                  <MeditationPlayer
+                    tenant={tenant}
+                    sectionId={s.id}
+                    src={mediaUrls.get(s.id)!}
+                    durationSec={s.mediaDurationSec ?? 0}
+                    autoLogs={autoLogs && !isAdmin}
+                  />
                 )}
                 {!isAdmin && (req.checkoff || req.upload_required) && (
                   <div className="mt-5 flex items-center gap-3">

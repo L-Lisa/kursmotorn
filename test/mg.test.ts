@@ -284,6 +284,66 @@ test("granskningskontot läser hela kursen (nio veckor, alla sektioner)", async 
   assert.ok((secCount ?? 0) >= 183, `alla sektioner ska vara läsbara (fick ${secCount})`);
 });
 
+
+test("FFMQ: tidslåset — pre nekas efter fönster 2 (starts_at -42), post tillåts från fönster 6", async () => {
+  const all3 = Array(39).fill(3);
+  const pre = await me.rpc("submit_ffmq", { p_cohort_id: COHORT, p_occasion: "pre", p_answers: all3 });
+  assert.ok(pre.error && /låst/.test(pre.error.message), "pre borde vara låst (fönster 2 passerat)");
+
+  const post = await me.rpc("submit_ffmq", { p_cohort_id: COHORT, p_occasion: "post", p_answers: all3 });
+  assert.ok(!post.error, `post från fönster 6 ska gå: ${post.error?.message}`);
+  assert.equal(post.data.total_score, 117, "alla 3:or ⇒ 39×3 = 117 (3 är opåverkad av vändning)");
+  await svc.from("mg_ffmq_responses").delete().eq("user_id", userId);
+});
+
+test("FFMQ: scoring med vändlogik (Baers instruktion) — tre kända fall + upsert; direktinsert nekas", async () => {
+  // Egen engångsdeltagare med starts_at IDAG ⇒ pre är öppen (fönster 1).
+  const email = `ffmq-${Date.now()}@mind.test`;
+  const u = await svc.auth.admin.createUser({ email, password: PW, email_confirm: true, user_metadata: { full_name: "Frida Öst" } });
+  assert.ok(!u.error, `createUser: ${u.error?.message}`);
+  const uid = u.data.user!.id;
+  try {
+    await svc.from("memberships").insert({ user_id: uid, tenant_id: T2, role: "participant" });
+    await svc.from("enrollments").insert({ tenant_id: T2, user_id: uid, cohort_id: COHORT, course_id: MG_COURSE, starts_at: iso(0) });
+    const c = await login(email);
+
+    const submit = (answers: number[]) =>
+      c.rpc("submit_ffmq", { p_cohort_id: COHORT, p_occasion: "pre", p_answers: answers });
+
+    // Fall 1: alla 3 ⇒ facetter 24/24/24/24/21, total 117.
+    const r1 = await submit(Array(39).fill(3));
+    assert.ok(!r1.error, `fall 1: ${r1.error?.message}`);
+    assert.equal(r1.data.total_score, 117);
+    assert.deepEqual(r1.data.facet_scores, { observing: 24, describing: 24, acting_awareness: 24, nonjudging: 24, nonreactivity: 21 });
+
+    // Fall 2: alla 5 ⇒ R-items vänds till 1: observing 40, describing 28, acting 8, nonjudging 8, nonreactivity 35 = 119.
+    const r2 = await submit(Array(39).fill(5));
+    assert.ok(!r2.error, `fall 2: ${r2.error?.message}`);
+    assert.equal(r2.data.total_score, 119);
+    assert.deepEqual(r2.data.facet_scores, { observing: 40, describing: 28, acting_awareness: 8, nonjudging: 8, nonreactivity: 35 });
+
+    // Fall 3: alla 1 ⇒ R-items vänds till 5: observing 8, describing 20, acting 40, nonjudging 40, nonreactivity 7 = 115.
+    const r3 = await submit(Array(39).fill(1));
+    assert.ok(!r3.error, `fall 3: ${r3.error?.message}`);
+    assert.equal(r3.data.total_score, 115);
+    assert.deepEqual(r3.data.facet_scores, { observing: 8, describing: 20, acting_awareness: 40, nonjudging: 40, nonreactivity: 7 });
+
+    // Upsert: EN rad kvar (senaste svaren gäller tills låset slår till).
+    const { count } = await svc.from("mg_ffmq_responses").select("id", { count: "exact", head: true }).eq("user_id", uid);
+    assert.equal(count, 1, "omsvar före låset ska skriva över, inte dubblera");
+
+    // Ogiltiga svar avvisas; direktskrivning är borttagen.
+    assert.ok((await submit(Array(39).fill(6))).error, "värde 6 borde avvisas");
+    assert.ok((await submit(Array(15).fill(3))).error, "15 svar borde avvisas (instrumentet är 39)");
+    const direct = await c.from("mg_ffmq_responses").insert({
+      tenant_id: T2, user_id: uid, cohort_id: COHORT, occasion: "post", answers: [],
+    });
+    assert.ok(direct.error, "deltagare kunde skriva FFMQ direkt (tidslåset kringgått)");
+  } finally {
+    await svc.auth.admin.deleteUser(uid);
+  }
+});
+
 test("GDPR-raderingen: kaskad + Storage + revokerat/anonymiserat certifikat", async () => {
   // Ge deltagaren ett certifikat + en riktig Storage-fil att radera.
   const cert = await svc.from("certificates").insert({

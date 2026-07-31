@@ -10,6 +10,8 @@ export type CourseSection = {
   content: string | null;
   requirements: SectionRequirements;
   dripOffsetDays: number | null;
+  mediaPath: string | null;
+  mediaDurationSec: number | null;
 };
 
 export type CourseModule = {
@@ -50,7 +52,7 @@ export async function getCourseForTenant(
 
   const { data: modules } = await supabase
     .from("modules")
-    .select("id, title, position, intro, sections(id, title, position, content, requirements, drip_offset_days)")
+    .select("id, title, position, intro, sections(id, title, position, content, requirements, drip_offset_days, media_path, media_duration_sec)")
     .eq("course_id", course.id);
 
   const shaped: CourseModule[] = (modules ?? [])
@@ -67,6 +69,8 @@ export async function getCourseForTenant(
           content: (s.content as string | null) ?? null,
           requirements: (s.requirements as SectionRequirements) ?? {},
           dripOffsetDays: (s.drip_offset_days as number | null) ?? null,
+          mediaPath: (s.media_path as string | null) ?? null,
+          mediaDurationSec: (s.media_duration_sec as number | null) ?? null,
         }))
         .sort((a, b) => a.position - b.position),
     }))

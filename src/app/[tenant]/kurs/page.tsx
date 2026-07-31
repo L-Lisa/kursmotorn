@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
 import Link from "next/link";
 import { getCourseForTenant, getGatingState, getCourseQuizzes, getCourseLogTypes } from "@/lib/tenant/course";
+import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { CheckoffButton } from "./checkoff-button";
 import { UploadControl } from "./upload-control";
@@ -28,6 +29,18 @@ export default async function TenantCourse({
   const logTypes = course ? await getCourseLogTypes(course.id) : [];
   const hasPracticeLog = logTypes.some((t) => t.logType === "practice_day");
   const hasGuideLog = logTypes.some((t) => t.logType === "guide_session");
+  // FFMQ visas för kurser med mätfönster (log_threshold-certvillkoret).
+  const supabaseForReq = await createClient();
+  const hasFfmq = course
+    ? !!(
+        await supabaseForReq
+          .from("course_certificate_requirements")
+          .select("id")
+          .eq("course_id", course.id)
+          .eq("type", "log_threshold")
+          .maybeSingle()
+      ).data
+    : false;
 
   const totalSections = course?.modules.reduce((n, m) => n + m.sections.length, 0) ?? 0;
   const doneSections =
@@ -64,8 +77,16 @@ export default async function TenantCourse({
               {doneSections}/{totalSections} avbockade ·{" "}
               {course.unlockMode === "scheduled" ? "schemalagd" : "egen takt"}
             </p>
-            {(hasPracticeLog || hasGuideLog) && (
+            {(hasPracticeLog || hasGuideLog || hasFfmq) && (
               <p className="mb-10 flex gap-5">
+                {hasFfmq && (
+                  <Link
+                    href={`/${tenant}/kurs/ffmq`}
+                    className="font-[family-name:var(--t-mono)] text-xs text-[var(--t-primary)] hover:underline"
+                  >
+                    Förmätning →
+                  </Link>
+                )}
                 {hasPracticeLog && (
                   <Link
                     href={`/${tenant}/kurs/logg`}
@@ -84,7 +105,7 @@ export default async function TenantCourse({
                 )}
               </p>
             )}
-            {!hasPracticeLog && !hasGuideLog && <div className="mb-6" />}
+            {!hasPracticeLog && !hasGuideLog && !hasFfmq && <div className="mb-6" />}
 
             <ol className="flex flex-col gap-4">
               {course.modules.map((m) => {
