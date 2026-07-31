@@ -154,6 +154,48 @@ test("practice_day dagsunik; guide_session inte (via log_activity — direktinse
   await admin.from("activity_logs").delete().eq("user_id", A).eq("logged_date", day);
 });
 
+test("Granskningsläget är läsläge: admin kan aldrig skriva egen progress", async () => {
+  // Migration ..15: gransknings-/adminkonton (is_tenant_admin) skriver aldrig egen
+  // progress — varken via RLS-vägarna eller SECURITY DEFINER-funktionerna.
+  const admin = await signIn("admin1@andning.test");
+  const { course, section, quiz } = await anchors(admin);
+  const uid = (await admin.auth.getUser()).data.user.id;
+  const day = new Date().toISOString().slice(0, 10);
+
+  const checkoff = await admin.from("section_progress").insert({
+    tenant_id: course.tenant_id, user_id: uid, section_id: section.id,
+  });
+  assert.ok(checkoff.error, "admin kunde bocka av en sektion åt sig själv");
+
+  const upload = await admin.from("uploads").insert({
+    tenant_id: course.tenant_id, user_id: uid, section_id: section.id,
+    storage_path: `${course.tenant_id}/${uid}/${section.id}/x.mp4`, size_bytes: 1,
+  });
+  assert.ok(upload.error, "admin kunde registrera en egen uppladdning");
+
+  const log = await admin.rpc("log_activity", {
+    p_course_id: course.id, p_log_type: "practice_day", p_logged_date: day,
+  });
+  assert.ok(/läsläge/.test(log.error?.message ?? ""), "admin kunde logga egen aktivitet");
+
+  const attempt = await admin.rpc("submit_quiz_attempt", { p_quiz_id: quiz.id, p_answers: {} });
+  assert.ok(/läsläge/.test(attempt.error?.message ?? ""), "admin kunde skriva eget provförsök");
+
+  const attest = await admin.rpc("submit_attestation", { p_course_id: course.id });
+  assert.ok(/läsläge/.test(attest.error?.message ?? ""), "admin kunde lämna egen attestation");
+
+  // Deltagarens väg är orörd: Anna kan fortfarande bocka av (och ångra).
+  const a = await signIn("anna@andning.test");
+  const first = (await a.from("sections").select("id, tenant_id").order("position").limit(1).single()).data;
+  await a.from("section_progress").delete().eq("user_id", A).eq("section_id", first.id); // rent utgångsläge
+  const own = await a.from("section_progress").insert({
+    tenant_id: first.tenant_id, user_id: A, section_id: first.id,
+  });
+  assert.ok(!own.error, `Annas avbockning gick sönder: ${own.error?.message}`);
+  const undo = await a.from("section_progress").delete().eq("user_id", A).eq("section_id", first.id).select();
+  assert.equal(undo.data?.length ?? 0, 1, "Anna kunde inte ångra sin avbockning");
+});
+
 test("Enrollment-funktionerna är admin-grindade; dubblettaktiv avvisas i DB", async () => {
   const a = await signIn("anna@andning.test");
   const admin = await signIn("admin1@andning.test");

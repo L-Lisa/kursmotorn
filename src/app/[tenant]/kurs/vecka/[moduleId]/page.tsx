@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
+import { getTenantContext, getCurrentUser, isReviewMode } from "@/lib/tenant/context";
 import { getCourseForTenant, getGatingState, getCourseLogTypes } from "@/lib/tenant/course";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -34,7 +34,7 @@ export default async function WeekReader({
   const mod = course.modules[moduleIndex];
 
   const supabase = await createClient();
-  const { data: isAdmin } = await supabase.rpc("is_tenant_admin", { tid: tenantId });
+  const isAdmin = await isReviewMode(tenantId);
   const gating = isAdmin ? null : await getGatingState(course, user.id);
   const logTypes = await getCourseLogTypes(course.id);
   const autoLogs = logTypes.some((t) => t.logType === "practice_day");
@@ -120,7 +120,9 @@ export default async function WeekReader({
                           locked={!unlocked}
                         />
                         <span className="text-sm text-[var(--t-muted)]">
-                          {g?.complete ? "Avbockad." : "Bocka av när du är klar."}
+                          {g?.complete
+                            ? "Avbockad — tryck i rutan igen om du vill ångra."
+                            : "Bocka av när du är klar."}
                         </span>
                       </>
                     )}

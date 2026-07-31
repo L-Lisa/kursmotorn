@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
+import { getTenantContext, getCurrentUser, isReviewMode } from "@/lib/tenant/context";
 import { getCourseForTenant } from "@/lib/tenant/course";
 
 type Result = { ok: boolean; error?: string };
+
+const REVIEW_READONLY = "Granskningsläget är ett läsläge — ingen progress skrivs.";
 
 /**
  * Loggåtgärder (fas 7). Reglerna bor i DB-funktionen log_activity (typregister,
@@ -21,6 +23,7 @@ async function log(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "ej inloggad" };
   const { tenantId } = await getTenantContext(tenant);
+  if (await isReviewMode(tenantId)) return { ok: false, error: REVIEW_READONLY };
   const course = await getCourseForTenant(tenantId);
   if (!course) return { ok: false, error: "ingen kurs" };
 
@@ -67,6 +70,7 @@ export async function recordPlayback(tenant: string, sectionId: string): Promise
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "ej inloggad" };
   const { tenantId } = await getTenantContext(tenant);
+  if (await isReviewMode(tenantId)) return { ok: false, error: REVIEW_READONLY };
   const course = await getCourseForTenant(tenantId);
   if (!course) return { ok: false, error: "ingen kurs" };
 

@@ -2,10 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
+import { getTenantContext, getCurrentUser, isReviewMode } from "@/lib/tenant/context";
 import { getCourseForTenant, getGatingState, sectionsInOrder } from "@/lib/tenant/course";
 
 type Result = { ok: boolean; error?: string };
+
+// Granskningsläget är ett läsläge: gransknings-/adminkonton skriver aldrig progress.
+// (Samma grind finns i DB — migration ..15 — detta ger bara det lugna felet.)
+const REVIEW_READONLY = "Granskningsläget är ett läsläge — ingen progress skrivs.";
 
 /**
  * Bockar av / bockar ur en sektion. Gating ENFORCE:as server-side här — inte i
@@ -17,6 +21,7 @@ export async function toggleSection(tenant: string, sectionId: string): Promise<
   if (!user) return { ok: false, error: "ej inloggad" };
 
   const { tenantId } = await getTenantContext(tenant);
+  if (await isReviewMode(tenantId)) return { ok: false, error: REVIEW_READONLY };
   const course = await getCourseForTenant(tenantId);
   if (!course) return { ok: false, error: "ingen kurs" };
 
@@ -44,7 +49,8 @@ export async function toggleSection(tenant: string, sectionId: string): Promise<
     if (error) return { ok: false, error: error.message };
   }
 
-  revalidatePath(`/${tenant}/kurs`);
+  // "layout" så även läsvyn (/kurs/vecka/…) uppdateras — avbockning/ångra görs där med.
+  revalidatePath(`/${tenant}/kurs`, "layout");
   return { ok: true };
 }
 
@@ -63,6 +69,7 @@ export async function recordUpload(
   if (!user) return { ok: false, error: "ej inloggad" };
 
   const { tenantId } = await getTenantContext(tenant);
+  if (await isReviewMode(tenantId)) return { ok: false, error: REVIEW_READONLY };
   const course = await getCourseForTenant(tenantId);
   if (!course) return { ok: false, error: "ingen kurs" };
 
@@ -85,6 +92,7 @@ export async function recordUpload(
   });
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath(`/${tenant}/kurs`);
+  // "layout" så även läsvyn (/kurs/vecka/…) uppdateras — avbockning/ångra görs där med.
+  revalidatePath(`/${tenant}/kurs`, "layout");
   return { ok: true };
 }

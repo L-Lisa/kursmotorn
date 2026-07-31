@@ -276,3 +276,26 @@ Migration `..05` (integritetshärdningen) skapade en andra relation mellan enrol
 ### GRIND 8 kvitto
 - **`scripts/grind8-check.mjs` ALLT GRÖNT mot färsk export ur ren DB** (db reset + båda importerna + båda ejecten): breathworks-standalonen **startar lokalt** (riktig HTTP-server) och **visar kursen** — kursöversikt + modul 1 med ordagrant innehållsstickprov (mening ur `kurs/modul-1.md` återfinns i renderad HTML; modulintro renderas — fixades i kontrollen) + palett A:s primärfärg i den statiska CSS:en · **MG-filaudit:** samtliga tabellfiler inkl. mg_-tabellerna + cohorts/enrollments/activity_logs/log_type_defs/approvals/certvillkor (4 st, rätt typer) · **ingen tenant-context-kod i standalone** (supabase/tenant_public_brand/NEXT_PUBLIC/fetch förbjudna i alla filer; serverkoden helt utan utåtriktade anrop — kursinnehållets egna länkar är verbatim och tillåtna).
 - **Stående vakter efter fas 8:** RLS 11/11 · gating 6/6 · windows 7/7 · cohort 7/7 · **breathworks-regressionen 7/7** · MG 9/9 · build grön · lint rent · namnbytes-grep 0 · hemlighetsgrind 0.
+
+## 2026-07-31 — Granskningsläget: bugg, grundorsak, läsläge (migration ..15)
+
+### Buggen (Lisas fynd, verifierad i webbläsare mot fjärren)
+- `granskning@mind.test` på `/mindfulnessguiden/kurs` fick deltagarvyn (1/183 avbockade, sektioner LÅST, avbockningsrutor) — granskningsgrenen fanns bara i läsvyn (`kurs/vecka/[id]`), aldrig i kursöversikten. Kvittots "v1+v9 läsbara" var sant för läsvyn; översikten var fel.
+- Värre: kontot kunde bocka av sektioner (progress skrevs). Grundorsak: inget i systemet skilde granskningsrollen från deltagarrollen på skrivvägarna.
+
+### Grundorsaksfixen: granskningsrollen är ett rent LÄSLÄGE
+- **Regel (Lisas beslut):** `is_tenant_admin` (tenant-admin/owner/plattformsadmin) ⇒ läser hela kursen upplåst, skriver ALDRIG egen progress.
+- **UI:** kursöversikten har nu granskningsgrenen via `isReviewMode` i context-lagret (delad med läsvyn): "granskningsläge — hela kursen är upplåst för läsning", inga rutor/uppladdningar/prov-CTA/certblock, alla sektioner läsbara.
+- **Serveråtgärder:** toggleSection, recordUpload och loggvägarna svarar "Granskningsläget är ett läsläge — ingen progress skrivs."
+- **DB (migration `..15`, applicerad på fjärren 2026-07-31):** insert-policyerna (`sp/up/at_insert_own`) exkluderar admin; admin-policyerna (`sp/up/al/qa/at/ff_admin`) får `with check … user_id <> auth.uid()` — admin hanterar andras rader (rättelser/nollställning åt deltagare består) men aldrig egen rad; de fyra SECURITY DEFINER-funktionerna (`log_activity`, `submit_quiz_attempt`, `submit_attestation`, `submit_ffmq`) har läslägesgrind (de kringgår RLS, så policyer räcker inte).
+- **Teststädning EN gång:** granskningskontots kvarvarande section_progress-rad (1 st, "Det här är din startpunkt") raderad på fjärren. Grundorsaken gör att nollställning aldrig behövs igen.
+- **Ny stående vakt:** RLS-sviten fall 12 "Granskningsläget är läsläge" — admin nekas alla fem skrivvägar; Annas avbockning + ångra regressionstestas i samma fall.
+
+### Ångra avbockning (Lisas punkt 2): fanns redan — samspelsbeslutet loggat
+- **Ångra har funnits sedan fas 3:** `toggleSection` är en toggle (befintlig rad ⇒ delete). UI: klicka den ibockade rutan igen, i kursöversikten eller läsvyn. Läsvyns text förtydligad ("Avbockad — tryck i rutan igen om du vill ångra."); `revalidatePath` breddad till layout så läsvyn uppdateras direkt efter toggle.
+- **Beslut: upplåsning förblir HÄRLEDD ur aktuell progress (ingen "har varit upplåst"-ratchet).** Ångras sektion N låses efterföljande oavklarade sektioner tills N bockas i igen; redan avklarade sektioner förblir avklarade (ingen data tappas) och allt står exakt som förut när N återbockas.
+- **Motivering mot specen (mot förslaget "redan upplåsta förblir upplåsta"):** (1) SPEC §2.3/§4.2 definierar upplåsning som en ren funktion av progress — samma kärna i vy och enforcement; ett persistent upplåst-tillstånd vore en andra sanning som kan divergera (vy/enforcement/eject/cert). (2) Provregeln sätter redan prejudikatet: gating räknas alltid om ur aktuellt läge. (3) Felklicksfallet förlorar inget — sektionen efter blev nyss upplåst och är orörd; ångrar man direkt märks låsningen inte. (4) Certvillkoren räknar mot aktuellt läge (`sections_complete` är ordningsfri) — dvs. Lisas krav "certvillkoren räknar alltid mot aktuellt läge" gällde redan.
+- **Deltagarnas gating i övrigt orörd:** `gating.ts` oförändrad; `test:gating` grönt.
+
+### Kvitto
+- Sviterna körda MOT FJÄRREN efter migrationen: RLS **12/12** · breathworks-regressionen **7/7** · cohort 7/7 · mg 11/11 · gating · windows · lint · build gröna. Skarp webbläsarverifiering mot kursmotorn.vercel.app före/efter (granskningskontot + deltagarstickprov). Obs: lokal Docker-stack kördes inte detta pass (Lisas Docker var låst) — `db reset`-reproducerbarheten täcks av att `..15` ligger som vanlig migrationsfil.

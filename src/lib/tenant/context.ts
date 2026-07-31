@@ -32,6 +32,18 @@ export const getTenantContext = cache(
   },
 );
 
+/**
+ * Granskningsläget: tenant-admin (inkl. plattformsadmin) läser kursen upplåst men
+ * skriver ALDRIG progress. Samma svar styr vy (kursvyn/läsvyn) och serveråtgärder
+ * (avbockning/uppladdning/logg) — DB:n har samma grind (migration ..15), så även
+ * ett direktanrop stoppas. cache() dedupar per request.
+ */
+export const isReviewMode = cache(async (tenantId: string): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("is_tenant_admin", { tid: tenantId });
+  return !!data;
+});
+
 /** Inloggad användare (eller null). RLS avgör vad hen sedan kan läsa. */
 export async function getCurrentUser() {
   const supabase = await createClient();

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getTenantContext, getCurrentUser } from "@/lib/tenant/context";
+import { getTenantContext, getCurrentUser, isReviewMode } from "@/lib/tenant/context";
 import Link from "next/link";
 import { getCourseForTenant, getGatingState, getCourseQuizzes, getCourseLogTypes } from "@/lib/tenant/course";
 import { createClient } from "@/lib/supabase/server";
@@ -11,6 +11,8 @@ import { UploadControl } from "./upload-control";
  * Inloggad, tenant-brandad kursvy (fas 3). Renderar strukturen + avbockning +
  * progress + gating (upplåst/låst) i tenantens varumärke — samma komponent, två brands.
  * RLS gatar allt: en icke-medlem får ingen kurs (course === null).
+ * Granskningsläge (tenant-admin): hela kursen upplåst för läsning — ingen gating,
+ * inga avbockningar/uppladdningar/prov (läsläget enforce:as även i DB, migration ..15).
  */
 export default async function TenantCourse({
   params,
@@ -23,15 +25,16 @@ export default async function TenantCourse({
   const user = await getCurrentUser();
   if (!user) redirect(`/${tenant}/login`);
 
+  const review = await isReviewMode(tenantId);
   const course = await getCourseForTenant(tenantId);
-  const gating = course ? await getGatingState(course, user.id) : null;
-  const quizzes = course ? await getCourseQuizzes(course.id, user.id) : [];
-  const logTypes = course ? await getCourseLogTypes(course.id) : [];
+  const gating = course && !review ? await getGatingState(course, user.id) : null;
+  const quizzes = course && !review ? await getCourseQuizzes(course.id, user.id) : [];
+  const logTypes = course && !review ? await getCourseLogTypes(course.id) : [];
   const hasPracticeLog = logTypes.some((t) => t.logType === "practice_day");
   const hasGuideLog = logTypes.some((t) => t.logType === "guide_session");
   // FFMQ visas för kurser med mätfönster (log_threshold-certvillkoret).
   const supabaseForReq = await createClient();
-  const hasFfmq = course
+  const hasFfmq = course && !review
     ? !!(
         await supabaseForReq
           .from("course_certificate_requirements")
@@ -74,8 +77,11 @@ export default async function TenantCourse({
               {course.displayName}
             </h1>
             <p className="mb-4 font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
-              {doneSections}/{totalSections} avbockade ·{" "}
-              {course.unlockMode === "scheduled" ? "schemalagd" : "egen takt"}
+              {review
+                ? "granskningsläge — hela kursen är upplåst för läsning"
+                : `${doneSections}/${totalSections} avbockade · ${
+                    course.unlockMode === "scheduled" ? "schemalagd" : "egen takt"
+                  }`}
             </p>
             {(hasPracticeLog || hasGuideLog || hasFfmq) && (
               <p className="mb-10 flex gap-5">
@@ -124,15 +130,17 @@ export default async function TenantCourse({
                           {m.title.replace(/^Modul\s+\d+\s+—\s+/, "")}
                         </Link>
                       </h2>
-                      <span className="ml-auto font-[family-name:var(--t-mono)] text-[10px] text-[var(--t-muted)]">
-                        {done}/{m.sections.length}
-                      </span>
+                      {!review && (
+                        <span className="ml-auto font-[family-name:var(--t-mono)] text-[10px] text-[var(--t-muted)]">
+                          {done}/{m.sections.length}
+                        </span>
+                      )}
                     </div>
 
                     <ul className="mt-4 flex flex-col divide-y divide-[var(--t-soft)]">
                       {m.sections.map((s) => {
                         const g = gating?.get(s.id);
-                        const locked = !g?.unlocked;
+                        const locked = review ? false : !g?.unlocked;
                         const req = s.requirements ?? {};
                         return (
                           <li
@@ -141,7 +149,14 @@ export default async function TenantCourse({
                               locked ? "text-[var(--t-muted)]" : "text-[var(--t-text)]"
                             }`}
                           >
-                            {req.checkoff ? (
+                            {review ? (
+                              <span
+                                className="flex h-6 w-6 items-center justify-center rounded-md text-[11px] text-[var(--t-muted)]"
+                                aria-hidden
+                              >
+                                •
+                              </span>
+                            ) : req.checkoff ? (
                               <CheckoffButton
                                 tenant={tenant}
                                 sectionId={s.id}
@@ -159,7 +174,7 @@ export default async function TenantCourse({
                               </span>
                             )}
                             <span>{s.title.replace(/^Sektion\s+\S+\s+/, "")}</span>
-                            {req.upload_required && (
+                            {!review && req.upload_required && (
                               <span className="ml-auto">
                                 <UploadControl
                                   tenant={tenant}
@@ -228,6 +243,7 @@ export default async function TenantCourse({
               </section>
             )}
 
+            {!review && (
             <section className="mt-10 flex items-center justify-between rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] px-5 py-4">
               <div>
                 <p className="font-[family-name:var(--t-serif)] text-[15px] text-[var(--t-text)]">
@@ -244,6 +260,7 @@ export default async function TenantCourse({
                 Gå till certifiering →
               </Link>
             </section>
+            )}
           </>
         )}
       </main>
