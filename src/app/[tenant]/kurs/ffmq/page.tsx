@@ -6,11 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import {
   FFMQ_TITLE,
-  FFMQ_AUTHOR,
+  FFMQ_ATTRIBUTION,
   FFMQ_AUTHOR_URL,
   FFMQ_SWEDISH_VERSION_URL,
-  FFMQ_FACETS,
+  FFMQ_MAX_SCORE,
 } from "@/lib/tenant/ffmq";
+import type { FacetScore } from "@/lib/tenant/ffmq-score";
 import { FfmqForm } from "./ffmq-form";
 
 /**
@@ -65,7 +66,7 @@ export default async function FfmqPage({
     : null;
   const preLocked = lockDate ? new Date().toISOString().slice(0, 10) >= lockDate : true;
 
-  const facetScores = (pre?.facet_scores ?? null) as Record<string, number> | null;
+  const facetScores = (pre?.facet_scores ?? null) as FacetScore[] | null;
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
@@ -87,29 +88,29 @@ export default async function FfmqPage({
           {FFMQ_TITLE}
         </h1>
         <p className="mb-2 max-w-prose text-[15px] leading-relaxed text-[var(--t-muted)]">
-          En självskattning av fem sidor av mindfulness. Du fyller i den i början av kursen
+          En självskattning av fem sidor av mindfulness: Observera, Beskriva, Agera med
+          medvetenhet, Icke-dömande och Icke-reaktivitet. Du fyller i den i början av kursen
           och igen mot slutet — jämförelsen är din egen. Det finns inga rätt eller fel svar.
         </p>
         <p className="mb-8 max-w-prose text-sm text-[var(--t-muted)]">
-          Instrumentet är {FFMQ_AUTHOR}s{" "}
+          {FFMQ_ATTRIBUTION}{" "}
           <a
             href={FFMQ_AUTHOR_URL}
             target="_blank"
             rel="noreferrer"
             className="text-[var(--t-primary)] underline"
           >
-            Five Facet Mindfulness Questionnaire
+            Ruth Baer
           </a>{" "}
-          och återges här i sin engelska originallydelse. Det finns även en{" "}
+          ·{" "}
           <a
             href={FFMQ_SWEDISH_VERSION_URL}
             target="_blank"
             rel="noreferrer"
             className="text-[var(--t-primary)] underline"
           >
-            svensk översättning (Lunds universitet)
+            Lunds universitet
           </a>
-          .
         </p>
 
         {pre && facetScores && (
@@ -118,24 +119,24 @@ export default async function FfmqPage({
               Din förmätning {pre.completed_at ? `· ${String(pre.completed_at).slice(0, 10)}` : ""}
             </h2>
             <ul className="flex flex-col gap-2">
-              {FFMQ_FACETS.map((f) => (
-                <li key={f.key} className="flex items-center gap-3 text-sm">
-                  <span className="w-64 text-[var(--t-text)]">{f.label}</span>
+              {facetScores.map((f) => (
+                <li key={f.facet} className="flex items-center gap-3 text-sm">
+                  <span className="w-64 text-[var(--t-text)]">{f.facet}</span>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--t-soft)]">
                     <div
                       className="h-full rounded-full bg-[var(--t-primary)]"
-                      style={{ width: `${Math.round((100 * (facetScores[f.key] ?? 0)) / f.max)}%` }}
+                      style={{ width: `${Math.round((100 * f.score) / f.max)}%` }}
                     />
                   </div>
-                  <span className="w-14 text-right font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
-                    {facetScores[f.key] ?? 0}/{f.max}
+                  <span className="w-20 text-right font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
+                    {f.score}/{f.max} · ⌀{f.average}
                   </span>
                 </li>
               ))}
             </ul>
             <p className="mt-3 text-sm text-[var(--t-muted)]">
-              Totalpoäng: {pre.total_score}/195. Siffrorna är en ögonblicksbild, inte ett betyg
-              — de blir intressanta först i jämförelsen med eftermätningen.
+              Totalpoäng: {pre.total_score}/{FFMQ_MAX_SCORE}. Siffrorna är en ögonblicksbild,
+              inte ett betyg — de blir intressanta först i jämförelsen med eftermätningen.
             </p>
           </section>
         )}

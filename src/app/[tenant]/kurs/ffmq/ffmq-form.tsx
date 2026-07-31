@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FFMQ_ITEMS, FFMQ_SCALE, FFMQ_INSTRUCTION } from "@/lib/tenant/ffmq";
+import { FFMQ_QUESTIONS, FFMQ_SCALE } from "@/lib/tenant/ffmq";
 import { submitFfmq } from "./actions";
 
-/** FFMQ-formuläret: 39 påståenden, skala 1–5 (originalets lydelser, ordagrant). */
+/** FFMQ-15-formuläret: sajtens 15 svenska påståenden, skala 1–5 (lydelser ordagrant). */
 export function FfmqForm({
   tenant,
   cohortId,
@@ -16,45 +16,50 @@ export function FfmqForm({
   lockDate: string | null;
   hasExisting: boolean;
 }) {
-  const [answers, setAnswers] = useState<(number | null)[]>(Array(FFMQ_ITEMS.length).fill(null));
+  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const answered = answers.filter((a) => a !== null).length;
-  const complete = answered === FFMQ_ITEMS.length;
+  const answered = Object.keys(answers).length;
+  const complete = answered === FFMQ_QUESTIONS.length;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!complete) {
-          setError("Alla påståenden behöver ett svar.");
+          setError("Besvara alla påståenden innan du sparar.");
           return;
         }
         start(async () => {
           setError(null);
-          const res = await submitFfmq(tenant, cohortId, answers as number[]);
+          const res = await submitFfmq(tenant, cohortId, answers);
           if (!res.ok) setError(res.error ?? "kunde inte spara");
         });
       }}
     >
-      <p className="mb-4 max-w-prose text-sm italic text-[var(--t-muted)]">{FFMQ_INSTRUCTION}</p>
       <div className="mb-6 rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] p-4 text-xs text-[var(--t-muted)]">
+        <p className="mb-1 text-[var(--t-text)]">
+          Välj hur sanna påståendena känns för dig just nu.
+        </p>
         {FFMQ_SCALE.map((s) => (
           <span key={s.value} className="mr-4 inline-block">
-            <strong className="text-[var(--t-text)]">{s.value}</strong> = {s.label}
+            {s.label}
           </span>
         ))}
       </div>
 
       <ol className="flex flex-col gap-5">
-        {FFMQ_ITEMS.map((item, i) => (
-          <li key={i} className="rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] p-4">
+        {FFMQ_QUESTIONS.map((q, i) => (
+          <li key={q.id} className="rounded-lg border border-[var(--t-soft)] bg-[var(--t-card)] p-4">
+            <p className="mb-1 font-[family-name:var(--t-mono)] text-[10px] uppercase tracking-[0.08em] text-[var(--t-muted)]">
+              {q.facet}
+            </p>
             <p className="mb-3 text-[15px] text-[var(--t-text)]">
               <span className="mr-2 font-[family-name:var(--t-mono)] text-xs text-[var(--t-muted)]">
                 {i + 1}.
               </span>
-              {item}
+              {q.text}
             </p>
             <div className="flex gap-2" role="radiogroup" aria-label={`Påstående ${i + 1}`}>
               {FFMQ_SCALE.map((s) => (
@@ -62,13 +67,11 @@ export function FfmqForm({
                   key={s.value}
                   type="button"
                   role="radio"
-                  aria-checked={answers[i] === s.value}
+                  aria-checked={answers[q.id] === s.value}
                   title={s.label}
-                  onClick={() =>
-                    setAnswers((prev) => prev.map((v, j) => (j === i ? s.value : v)))
-                  }
+                  onClick={() => setAnswers((prev) => ({ ...prev, [q.id]: s.value }))}
                   className={`h-9 w-9 rounded-md border text-sm ${
-                    answers[i] === s.value
+                    answers[q.id] === s.value
                       ? "border-[var(--t-primary)] bg-[var(--t-primary)] text-white"
                       : "border-[var(--t-soft)] text-[var(--t-text)] hover:border-[var(--t-primary)]"
                   }`}
@@ -90,7 +93,7 @@ export function FfmqForm({
           {pending ? "Sparar …" : hasExisting ? "Uppdatera förmätningen" : "Spara förmätningen"}
         </button>
         <span className="text-sm text-[var(--t-muted)]">
-          {answered}/{FFMQ_ITEMS.length} besvarade
+          {answered}/{FFMQ_QUESTIONS.length} besvarade
           {lockDate ? ` · kan ändras t.o.m. ${lockDate}` : ""}
         </span>
       </div>

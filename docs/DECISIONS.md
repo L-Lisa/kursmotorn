@@ -252,6 +252,19 @@ Migration `..05` (integritetshärdningen) skapade en andra relation mellan enrol
 - **Fjärrverifiering — ALLA sviter gröna MOT FJÄRR-DB:N:** RLS **11/11** · kohort **7/7** · **breathworks-regressionen 7/7** · MG **11/11** (inkl. FFMQ-tidslås/scoring, importens ordagrannhet DB→källfil, GDPR-raderingen med fjärr-Storage). Hemlighetsgrind fortsatt **0** (nycklarna bor enbart i git-ignorerade env-filer).
 - **Kvarstår för visning:** preview-deploy (Vercel) är INTE gjord — deploy är Lisas knapp, per gång, precis som tidigare.
 
+## 2026-07-31 — FFMQ-15 (svensk) BYGGD OCH DRIFTSATT — ersätter 39-versionen (migration `..14`)
+
+### Källa + återhämtning
+- **Källan:** sajtens FFMQ-svit ur gamla Mindfulnessguiden-repot (`data/testQuestions.ts` + `lib/ffmqScore.ts`), levererad av Lisa via klistring (sajtrepo-sökvägen `/Users/lisa/dev/mindfulnessguiden-se` fanns inte på disken — fallback per Lisas instruktion). Klistringskanalen åt tecken på fasta positioner; **varje rad korsverifierades över tre klistringar** innan den accepterades (q14:s text och q8:s vändflagga kom i tredje leveransen; q3:s facett återhämtades mekaniskt ur typunionen — enda facetten som slutar på "tenhet"). Inget formulerades om.
+- **Instrumentet (ordagrant ur sajten):** 15 svenska påståenden q1–q15 · skala "1. Aldrig eller nästan aldrig sant" … "5. Väldigt ofta eller alltid sant" · facetter Observera/Beskriva/Agera med medvetenhet/Icke-dömande/Icke-reaktivitet (3 items var) · **vändlistan: q3, q4, q7, q8, q9, q13, q14** (7 av 15).
+- **Scoringen:** sajtens `evaluateFFMQAnswers` porterad ORDAGRANT till `ffmq-score.ts` (= facit) och speglad i DB-funktionen `submit_ffmq` v3 (migration `..14`): adjusted = reverse ? 6−raw : raw · total 15–75 · facetter med score/min/max/average (2 dec). **Svaren lagras som sajtens AnswerMap ({"q1": 1..5, …}, samma id:n)** — före/efter-data jämförbar över system. Tidslåset oförändrat. 39-versionens data rensad (answers-arrayer, inkl. fas 1-seedens placeholder-rad).
+- **UI:** svenska lydelser + facettetikett per item + Lisas attributionsrad ("FFMQ-15 efter Baer m.fl. (2006) och Gu m.fl. (2016). Svensk version finns validerad (Lilja m.fl.).") med länkar till ruthbaer.com + Lunds universitets publikationssida. Sajtens nivåband ("Utforska din närvaro" osv.) och e-post/samtyckesflödet är sajtens presentations-/leadlager och följer INTE med in i kursappen; gamla formulärets "validerat för arbetsplatser"-rad utgår (rättighetsresearchen avrådde).
+- **Advisor-notering (stängd):** q8 såg i två klistringar ut att sakna vändflagga (potentiell sajtbugg) — tredje klistringen visade `reverseScored: true`; sajten är konsekvent, ingen åtgärd.
+
+### Kvitto
+- **ACCEPTANCE §Fas 7-kriteriet UPPFYLLT:** test:mg 9–10 kör tre kända testfall (alla 3:or ⇒ 45 · alla 5:or ⇒ 47 · mönstret 1–5×3 ⇒ 41) genom BÅDE sajtens porterade funktion och DB-funktionen — total OCH facetter (ordning, score, min, max, average) identiska. Vändlistan regressionstestas explicit. **Grönt LOKALT och MOT FJÄRREN** (migration ..14 applicerad på båda; hela MG-sviten 11/11 på båda).
+- Formuläret verifierat i webbläsaren (svenska items, attributionsrad, 15/15, låsdatum synligt) — skärmdumpar 10–11 i grind7-mappen omtagna. Lärdomsnotis: en kvarhängande dev-server på port 3000 serverade gammal kod under första omtagningen — processtädning löste det (ingen kodändring).
+
 ## 2026-07-30 — Fas 8: eject-exporten
 
 ### Paketets form (tolkningsbeslut, loggade)

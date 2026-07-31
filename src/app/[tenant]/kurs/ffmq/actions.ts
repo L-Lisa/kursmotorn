@@ -13,7 +13,7 @@ type Result = { ok: boolean; error?: string };
 export async function submitFfmq(
   tenant: string,
   cohortId: string,
-  answers: number[],
+  answers: Record<string, number>, // sajtens AnswerMap: {"q1": 1..5, ...}
 ): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "ej inloggad" };

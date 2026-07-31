@@ -1,78 +1,138 @@
 /**
- * FFMQ — Five Facet Mindfulness Questionnaire (Ruth A. Baer, Ph.D., University of
- * Kentucky). Återgivet ORDAGRANT ur originalformuläret (FFMQ-eng.pdf) — Lisas beslut
- * 2026-07-31: instrumentet återges med källhänvisning, säljs inte. Ändra ALDRIG
- * lydelser — instrumentdrift förstör före/efter-jämförbarheten.
+ * FFMQ-15 — svensk version ur sajtens självtest (Mindfulnessguiden.se-repots
+ * FFMQ-svit, `data/testQuestions.ts`). Lisas beslut: items + scoring kopieras
+ * ORDAGRANT (inkl. poängvändningen) — formuleringar och ordning ändras ALDRIG;
+ * instrumentdrift förstör före/efter-jämförbarheten. Grund: FFMQ-15:s öppna
+ * publicering + attribution (docs/DECISIONS 2026-07-31).
  *
- * Scoringen (vändning + facettsummor) bor i DB-funktionen submit_ffmq — EN sanning.
- * Här bor bara det som VISAS: items, skalan, facettnamn och attributionen.
+ * Scoringen (sajtens evaluateFFMQAnswers) är porterad ordagrant i ffmq-score.ts;
+ * DB-funktionen submit_ffmq (migration ..14) speglar samma logik — testerna kör
+ * båda mot samma facit.
  */
 
-export const FFMQ_TITLE = "Five Facet Mindfulness Questionnaire (FFMQ)";
-export const FFMQ_AUTHOR = "Ruth A. Baer, Ph.D., University of Kentucky";
+export const FFMQ_TITLE = "FFMQ-15 – Five-Facet Mindfulness Questionnaire";
+export const FFMQ_ATTRIBUTION =
+  "FFMQ-15 efter Baer m.fl. (2006) och Gu m.fl. (2016). Svensk version finns validerad (Lilja m.fl.).";
 export const FFMQ_AUTHOR_URL = "https://ruthbaer.com/academics/index.html";
 export const FFMQ_SWEDISH_VERSION_URL =
   "https://www.lunduniversity.lu.se/publication/96f42e8f-d0ae-4b2e-b436-13b9e995fdeb";
 
-export const FFMQ_INSTRUCTION =
-  "Please rate each of the following statements using the scale provided. " +
-  "Write the number in the blank that best describes your own opinion of what is generally true for you.";
+export type FfmqFacet =
+  | "Observera"
+  | "Beskriva"
+  | "Agera med medvetenhet"
+  | "Icke-dömande"
+  | "Icke-reaktivitet";
 
-export const FFMQ_SCALE: { value: number; label: string }[] = [
-  { value: 1, label: "never or very rarely true" },
-  { value: 2, label: "rarely true" },
-  { value: 3, label: "sometimes true" },
-  { value: 4, label: "often true" },
-  { value: 5, label: "very often or always true" },
+export type FfmqQuestion = {
+  id: string;
+  text: string;
+  facet: FfmqFacet;
+  reverseScored?: boolean;
+};
+
+/** Skalan — sajtens etiketter ordagrant. */
+export const FFMQ_SCALE: { label: string; value: number }[] = [
+  { label: "1. Aldrig eller nästan aldrig sant", value: 1 },
+  { label: "2. Sällan sant", value: 2 },
+  { label: "3. Ibland sant", value: 3 },
+  { label: "4. Ofta sant", value: 4 },
+  { label: "5. Väldigt ofta eller alltid sant", value: 5 },
 ];
 
-export const FFMQ_ITEMS: string[] = [
-  "When I’m walking, I deliberately notice the sensations of my body moving.",
-  "I’m good at finding words to describe my feelings.",
-  "I criticize myself for having irrational or inappropriate emotions.",
-  "I perceive my feelings and emotions without having to react to them.",
-  "When I do things, my mind wanders off and I’m easily distracted.",
-  "When I take a shower or bath, I stay alert to the sensations of water on my body.",
-  "I can easily put my beliefs, opinions, and expectations into words.",
-  "I don’t pay attention to what I’m doing because I’m daydreaming, worrying, or otherwise distracted.",
-  "I watch my feelings without getting lost in them.",
-  "I tell myself I shouldn’t be feeling the way I’m feeling.",
-  "I notice how foods and drinks affect my thoughts, bodily sensations, and emotions.",
-  "It’s hard for me to find the words to describe what I’m thinking.",
-  "I am easily distracted.",
-  "I believe some of my thoughts are abnormal or bad and I shouldn’t think that way.",
-  "I pay attention to sensations, such as the wind in my hair or sun on my face.",
-  "I have trouble thinking of the right words to express how I feel about things",
-  "I make judgments about whether my thoughts are good or bad.",
-  "I find it difficult to stay focused on what’s happening in the present.",
-  "When I have distressing thoughts or images, I “step back” and am aware of the thought or image without getting taken over by it.",
-  "I pay attention to sounds, such as clocks ticking, birds chirping, or cars passing.",
-  "In difficult situations, I can pause without immediately reacting.",
-  "When I have a sensation in my body, it’s difficult for me to describe it because I can’t find the right words.",
-  "It seems I am “running on automatic” without much awareness of what I’m doing.",
-  "When I have distressing thoughts or images, I feel calm soon after.",
-  "I tell myself that I shouldn’t be thinking the way I’m thinking.",
-  "I notice the smells and aromas of things.",
-  "Even when I’m feeling terribly upset, I can find a way to put it into words.",
-  "I rush through activities without being really attentive to them.",
-  "When I have distressing thoughts or images I am able just to notice them without reacting.",
-  "I think some of my emotions are bad or inappropriate and I shouldn’t feel them.",
-  "I notice visual elements in art or nature, such as colors, shapes, textures, or patterns of light and shadow.",
-  "My natural tendency is to put my experiences into words.",
-  "When I have distressing thoughts or images, I just notice them and let them go.",
-  "I do jobs or tasks automatically without being aware of what I’m doing.",
-  "When I have distressing thoughts or images, I judge myself as good or bad, depending what the thought/image is about.",
-  "I pay attention to how my emotions affect my thoughts and behavior.",
-  "I can usually describe how I feel at the moment in considerable detail.",
-  "I find myself doing things without paying attention.",
-  "I disapprove of myself when I have irrational ideas.",
+/** De 15 påståendena — sajtens svenska lydelser ordagrant, samma id:n och ordning. */
+export const FFMQ_QUESTIONS: FfmqQuestion[] = [
+  {
+    id: "q1",
+    text: "När jag tar en dusch eller ett bad håller jag mig alert på hur vattnet känns mot min kropp.",
+    facet: "Observera",
+  },
+  {
+    id: "q2",
+    text: "Jag är bra på att hitta ord som beskriver mina känslor.",
+    facet: "Beskriva",
+  },
+  {
+    id: "q3",
+    text: "Jag är inte uppmärksam på vad jag gör eftersom jag dagdrömmer, oroar mig eller blir distraherad.",
+    facet: "Agera med medvetenhet",
+    reverseScored: true,
+  },
+  {
+    id: "q4",
+    text: "Jag tror att vissa av mina tankar är onormala eller dåliga och att jag inte borde tänka på det sättet.",
+    facet: "Icke-dömande",
+    reverseScored: true,
+  },
+  {
+    id: "q5",
+    text: "När jag har påfrestande tankar eller bilder ”kliver jag tillbaka” och är medveten om dem utan att bli uppslukad.",
+    facet: "Icke-reaktivitet",
+  },
+  {
+    id: "q6",
+    text: "Jag lägger märke till hur mat och dryck påverkar mina tankar, kroppsliga förnimmelser och känslor.",
+    facet: "Observera",
+  },
+  {
+    id: "q7",
+    text: "Jag har svårt att komma på rätt ord för att uttrycka hur jag känner inför saker.",
+    facet: "Beskriva",
+    reverseScored: true,
+  },
+  {
+    id: "q8",
+    text: "Jag gör jobb eller uppgifter automatiskt utan att vara medveten om vad jag gör.",
+    facet: "Agera med medvetenhet",
+    reverseScored: true,
+  },
+  {
+    id: "q9",
+    text: "Jag upplever att vissa av mina känslor är dåliga eller olämpliga och att jag inte borde känna så.",
+    facet: "Icke-dömande",
+    reverseScored: true,
+  },
+  {
+    id: "q10",
+    text: "När jag har påfrestande tankar eller bilder kan jag bara notera dem utan att reagera.",
+    facet: "Icke-reaktivitet",
+  },
+  {
+    id: "q11",
+    text: "Jag uppmärksammar sinnesintryck som vinden i håret eller solen i ansiktet.",
+    facet: "Observera",
+  },
+  {
+    id: "q12",
+    text: "Även när jag är fruktansvärt upprörd kan jag hitta ett sätt att sätta ord på det.",
+    facet: "Beskriva",
+  },
+  {
+    id: "q13",
+    text: "Jag märker att jag gör saker utan att vara uppmärksam.",
+    facet: "Agera med medvetenhet",
+    reverseScored: true,
+  },
+  {
+    id: "q14",
+    text: "Jag säger till mig själv att jag inte borde känna på det här sättet.",
+    facet: "Icke-dömande",
+    reverseScored: true,
+  },
+  {
+    id: "q15",
+    text: "När jag har påfrestande tankar eller bilder noterar jag dem bara och låter dem gå.",
+    facet: "Icke-reaktivitet",
+  },
 ];
 
-/** Facettnamnen ur scoringinstruktionen (instrumentets egna) + max per facett. */
-export const FFMQ_FACETS: { key: string; label: string; max: number }[] = [
-  { key: "observing", label: "Observing", max: 40 },
-  { key: "describing", label: "Describing", max: 40 },
-  { key: "acting_awareness", label: "Acting with awareness", max: 40 },
-  { key: "nonjudging", label: "Nonjudging of inner experience", max: 40 },
-  { key: "nonreactivity", label: "Nonreactivity to inner experience", max: 35 },
+export const FFMQ_FACETS: FfmqFacet[] = [
+  "Observera",
+  "Beskriva",
+  "Agera med medvetenhet",
+  "Icke-dömande",
+  "Icke-reaktivitet",
 ];
+
+export const FFMQ_MIN_SCORE = FFMQ_QUESTIONS.length * 1; // 15 frågor, skala 1-5
+export const FFMQ_MAX_SCORE = FFMQ_QUESTIONS.length * 5; // 75 poäng
